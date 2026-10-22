@@ -1,0 +1,1592 @@
+
+
+===== PAGE 1 =====
+TECHNICAL INTERVIEW ASSIGNMENT
+Server Troubleshooting
+Case Study
+cPanel • SnappyMail • Subdomains • DNS • Web & Mail Services
+Submitted By Pragati Pardhi
+Role AI Full Stack
+Environment AlmaLinux / CentOS with cPanel & WHM
+Submission Date 22 July 2026
+Document Purpose
+A practical, evidence-driven troubleshooting runbook 
+demonstrating Linux administration, cPanel/WHM 
+operations, mail-stack diagnostics, DNS analysis, reverse-
+proxy awareness, root-cause analysis, and post-resolution 
+validation.
+Prepared as an interview-quality technical document
+
+===== PAGE 2 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 2
+Document Control
+Field Value
+Document owner Pragati Pardhi
+Intended audience Technical interviewer, Linux administrator, hosting support 
+team, DevOps engineer
+Classification Interview submission / technical case study
+Scope Troubleshooting of cPanel access, SnappyMail webmail, and 
+selected subdomains
+Assumed access Root SSH access; ability to read logs and restart services
+Change principle Collect evidence first; apply the smallest reversible change; 
+validate after every action
+Table of Contents
+Section Page
+Executive Summary 3
+1. Introduction 4
+2. Assumed Server Environment 5
+3. Issue 1 - cPanel Is Not Accessible 7
+4. Issue 2 - SnappyMail Is Not Working 12
+5. Issue 3 - Some Subdomains Do Not Open 17
+6. Unified Troubleshooting and RCA Methodology 21
+7. Linux and cPanel Command Reference 23
+8. Important Log Files 25
+9. Important Configuration Files and Data Sources 26
+10. Preventive Best Practices 26
+11. Final Interview-Ready Incident Checklist 27
+12. Conclusion 28
+13. References 28
+Appendix A - Quick Command Packs 29
+Appendix B - Sample Incident Timeline 30
+
+===== PAGE 3 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 3
+Executive Summary
+This document presents a structured troubleshooting methodology for three related hosting incidents: an 
+inaccessible cPanel interface, an unavailable SnappyMail webmail application, and selected subdomains that fail 
+while the main domain remains reachable. The methodology starts by defining the user-visible symptom, 
+separating local service health from remote reachability, collecting time-correlated evidence, testing each layer 
+independently, and applying a controlled resolution only after the failing layer has been identified.
+The central principle is that a symptom is not a root cause. For example, “cPanel is down” may actually mean that 
+the cPanel application server is stopped, TCP port 2083 is blocked, the hostname resolves to the wrong address, 
+a TLS certificate causes browser rejection, the server is resource-starved, or only the client network is blocked. 
+Likewise, “webmail is not working” must be divided into web-interface failure, authentication failure, IMAP retrieval 
+failure, SMTP submission failure, and mail-delivery failure.
+Technical Accuracy Note
+Native cPanel, WHM, and cPanel Webmail interfaces are 
+served by the cPanel Server Daemon (cpsrvd), not by the 
+hosted Apache virtual host. Apache or Nginx failures can 
+still affect proxy/service-subdomain access or a separately 
+installed SnappyMail instance, but they are not automatically 
+the direct cause of https://hostname:2083 failures.
+Because the scenario provides no live command output, this report does not pretend that one exact root cause 
+has already been proven. Instead, it provides a decision-oriented runbook and an illustrative final RCA for each 
+issue. In an actual incident, the final RCA must be supported by timestamps, command output, logs, configuration 
+diffs, and validation results.
+Incident Priorities and Expected Business Impact
+Issue Likely Impact Initial Priority First Isolation Test
+cPanel inaccessible Administrators and customers 
+cannot manage hosting 
+accounts; possible broader 
+server fault
+P1/P2 depending on site impact Test https://127.0.0.1:2083 
+locally and verify port listener
+SnappyMail unavailable Users cannot read or send mail 
+through web UI; SMTP/IMAP 
+may still work in desktop clients
+P2 Separate HTTP application 
+response from IMAP/SMTP 
+health
+Some subdomains fail Specific applications, APIs, or 
+portals unavailable while main 
+website remains online
+P2/P3 Compare authoritative DNS, 
+origin Host-header response, 
+and virtual-host mapping
+
+===== PAGE 4 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 4
+1. Introduction
+1.1 What Technical Support Means in a Server Environment
+Technical support in a hosting environment is the controlled process of restoring a service while protecting data, 
+security, availability, and auditability. The engineer must translate a user report into testable technical statements, 
+determine the affected scope, reproduce or observe the failure, isolate the failing layer, apply a low-risk 
+correction, and prove that the service is stable after recovery.
+A professional support engineer does not begin by restarting every service. Blind restarts may temporarily hide 
+the evidence, create additional downtime, or make the original cause impossible to prove. The preferred 
+sequence is: record the time and error, test locally and remotely, check service state and resource health, review 
+relevant logs, validate configuration syntax, then restart only the affected component if the evidence supports it.
+1.2 Linux Server Administration
+Linux server administration covers operating-system health, service management, networking, storage, 
+permissions, identity, security controls, package maintenance, logging, backups, and application configuration. 
+On a cPanel server, the administrator must also understand the cPanel service layer, account metadata, DNS 
+zones, Apache user-data files, Exim and Dovecot integration, AutoSSL, and the effect of third-party components 
+such as Nginx reverse proxies, CSF, Cloudflare, or an independently deployed webmail application.
+1.3 Why a Troubleshooting Methodology Matters
+ It prevents random changes and reduces mean time to recovery.
+ It separates correlation from causation and preserves incident evidence.
+ It makes actions repeatable for other engineers and future incidents.
+ It reduces the risk of fixing one service while breaking another.
+ It produces an auditable RCA, including what failed, why it failed, and how recurrence will be prevented.
+1.4 Root Cause Analysis (RCA)
+Root Cause Analysis identifies the underlying condition that allowed the incident to occur. A complete RCA 
+includes the triggering event, technical failure mechanism, contributing conditions, detection gap, impact, recovery 
+action, and preventive control. For example, “Dovecot was restarted” is a recovery action; “Dovecot stopped 
+because /var was full after log rotation failed, and monitoring had no inode alert” is an RCA.
+1.5 Troubleshooting Principles Used in This Report
+Principle Application
+Scope before action Determine whether the failure affects one user, one domain, 
+one protocol, or the entire server.
+Local before remote Test loopback/origin access first, then firewall, DNS, proxy, and 
+client network.
+Layer isolation Treat application, service, port, firewall, DNS, TLS, and client 
+layers independently.
+Time correlation Match the user’s failure time with logs, service transitions, 
+resource spikes, and configuration changes.
+Reversible change Back up configuration and prefer a minimal fix that can be rolled 
+back.
+Validation Verify from both the server and an external client; test the actual 
+user workflow.
+
+===== PAGE 5 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 5
+2. Assumed Server Environment
+The case study assumes an AlmaLinux or CentOS-family server running cPanel & WHM. Exact paths and service 
+names can vary by cPanel version, operating system, EasyApache profile, and third-party integration. Commands 
+should therefore be confirmed against the live server before execution.
+Component Operational Role
+AlmaLinux / CentOS Enterprise Linux operating system providing systemd, RPM 
+packages, networking, storage, SELinux framework, and core logs.
+cPanel & WHM Hosting control platform. WHM provides server administration; 
+cPanel provides per-account management; cpsrvd serves the 
+control-panel interfaces.
+Apache HTTP Server Primary hosted-website web server in standard cPanel 
+deployments. VirtualHost definitions map domain names to 
+document roots.
+Nginx reverse proxy Optional front-end proxy or third-party integration. It may terminate 
+TLS, cache content, and forward traffic to Apache or application 
+backends.
+PHP / PHP-FPM Runs SnappyMail and other PHP applications. Failures can result 
+from missing extensions, version incompatibility, pool errors, 
+timeouts, or permission issues.
+MariaDB / MySQL Database platform for hosted applications. Base SnappyMail does 
+not require a database, but integrations or address-book plugins 
+may use one.
+Exim Mail Transfer Agent used by cPanel for SMTP receiving, routing, 
+queuing, and delivery.
+Dovecot IMAP/POP3 and authentication service used to access stored 
+mailboxes.
+SnappyMail PHP-based webmail client that connects to an IMAP server for 
+mailbox access and an SMTP server for sending.
+SSH Secure remote administration channel. Root SSH access is 
+assumed for diagnostics and service recovery.
+CSF / firewall Host firewall and login-failure controls that can allow, deny, or rate-
+limit cPanel, web, and mail ports.
+DNS Authoritative and recursive name resolution for domains, 
+subdomains, mail hosts, MX records, and service hostnames.
+SSL/TLS Certificate and protocol layer for cPanel, webmail, HTTPS 
+subdomains, IMAPS, POP3S, and SMTP submission.
+Cloudflare Optional authoritative DNS and reverse proxy. Proxied HTTP traffic 
+reaches Cloudflare first, then the origin server.
+2.1 Request Path Models
+Layered request paths
+Native cPanel access
+Browser -> DNS for server hostname -> Network/Firewall -> TCP 2083 -> cpsrvd -> cPanel 
+authentication/UI
+Standalone SnappyMail access
+Browser -> DNS/CDN -> TCP 443 -> Nginx/Apache -> PHP/PHP-FPM -> SnappyMail -> IMAP (Dovecot) + SMTP 
+(Exim)
+Subdomain access
+Browser -> Authoritative DNS -> Optional Cloudflare -> TCP 80/443 -> Nginx/Apache virtual host -> 
+DocumentRoot/Application
+2.2 Evidence Collection Before Changes
+Check Action / Evidence
+☐ Record exact URL, user-visible error, timestamp, source IP, 
+affected users, and whether the issue is intermittent.
+
+===== PAGE 6 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 6
+Check Action / Evidence
+☐ Confirm maintenance, package updates, DNS changes, 
+certificate renewals, firewall changes, migrations, or reboots 
+near the incident time.
+☐ Capture service status and resource state before restarting 
+anything.
+☐ Save relevant log excerpts with timestamps and the commands 
+used to obtain them.
+☐ Back up any configuration file before manual editing.
+
+===== PAGE 7 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 7
+3. Issue 1 - cPanel Is Not Accessible
+3.1 Problem Description and Symptoms
+The client cannot open cPanel using a secure URL such as https://hostname.example:2083 or a service 
+subdomain such as https://cpanel.example.com. The main website may or may not remain available. The 
+reported symptom must be refined into a specific failure mode.
+Observed Symptom Likely Layer
+Connection timed out Routing, firewall, security group, blocked source IP, or no 
+listener
+Connection refused No process listening, service stopped, or local reject rule
+TLS/certificate warning Hostname mismatch, expired certificate, incomplete chain, old 
+client protocol, or wrong endpoint
+HTTP 500 / blank interface cpsrvd application error, corrupted package, Perl/module error, 
+permission issue, or full filesystem
+Login page opens but credentials fail Authentication, account status, brute-force protection, clock 
+skew, or user error
+Works on server but not externally Firewall, NAT, provider security group, Cloudflare/proxy, ISP, or 
+source-IP block
+Works by IP but not hostname DNS record, resolver cache, hosts file, or hostname certificate 
+problem
+3.2 Possible Root Causes
+Potential Cause Technical Explanation
+cpsrvd/cPanel service down The cPanel Server Daemon is the application server for cPanel, 
+WHM, and cPanel Webmail. If it is stopped, hung, repeatedly 
+crashing, or unable to bind, ports such as 2083 and 2087 will not 
+respond normally.
+Firewall blocks 2083 CSF, firewalld, nftables, iptables, a cloud security group, or a 
+provider ACL may block TCP 2083. The service can be healthy 
+locally while remote clients time out.
+Source IP blocked cPHulk, CSF/LFD, fail2ban, or a manual deny rule may block only 
+the client’s IP, making the incident appear user-specific.
+TLS certificate problem The hostname certificate may be expired, not yet valid, 
+mismatched, incomplete, or replaced with an invalid certificate. 
+Browsers may stop the user before the login page loads.
+DNS resolution failure The cPanel hostname or service subdomain may resolve to an old 
+server, private address, Cloudflare proxy, or incorrect IPv6 address.
+Apache failure - indirect Apache does not serve native 2083. However, Apache failure can 
+break a proxy/service-subdomain route or create the impression of 
+a broader hosting outage.
+Nginx conflict - indirect A reverse proxy may intercept cpanel.example.com, use an 
+incorrect upstream, bind a conflicting address/port, or present the 
+wrong certificate.
+Disk or inode exhaustion A full /, /var, /usr, /tmp, or inode table can prevent logs, sessions, 
+temporary files, package updates, or service state files from being 
+written.
+Memory exhaustion / OOM cpsrvd or supporting processes may be killed or unable to allocate 
+memory. Swap exhaustion and repeated OOM kills are strong 
+evidence.
+CPU or I/O overload Extreme load, stuck backups, malware scanning, abusive 
+processes, or storage latency may cause timeouts even though the 
+process exists.
+Permission or package corruption Incorrect ownership/permissions or damaged cPanel files can 
+produce 500 errors and failed restarts.
+SELinux / security policy Unexpected enforcing policy or custom confinement may deny file, 
+socket, or execute access. Confirm AVC evidence before changing 
+policy.
+Network or routing failure Bad route, interface problem, upstream outage, NAT error, or 
+provider-level filtering can make multiple services unreachable.
+
+===== PAGE 8 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 8
+Potential Cause Technical Explanation
+Incomplete reboot/startup After a reboot, services may fail because of dependency ordering, 
+filesystem checks, stale PID files, unavailable mounts, or 
+configuration errors.
+License invalid or stale An expired, canceled, or IP-mismatched cPanel license can restrict 
+operation. The license cache may require refresh after an IP 
+change.
+3.3 Step-by-Step Troubleshooting Procedure
+Step 1 - Confirm Scope and Reproduce
+Test both the secure native port and any service-subdomain URL. Test from an external network and from the 
+server itself. Record whether the result is timeout, refusal, TLS failure, HTTP error, or authentication failure.
+# From the server
+curl -kIv --connect-timeout 10 https://127.0.0.1:2083/
+curl -kIv --connect-timeout 10 https://SERVER_HOSTNAME:2083/
+# Basic host and route context
+hostname -f
+ip addr show
+ip route show
+Result Interpretation
+127.0.0.1:2083 responds, hostname external test fails cpsrvd is likely healthy; investigate DNS, firewall, NAT, security 
+group, proxy, or source-IP block.
+127.0.0.1:2083 refuses No listener or immediate local reject; check service state and bind 
+errors.
+Local response is very slow Investigate CPU, memory, I/O wait, DNS resolver delays, or 
+overloaded cpsrvd.
+TLS handshake fails locally Inspect hostname certificate and cPanel TLS configuration.
+Step 2 - Check cPanel Service and Process State
+systemctl status cpanel --no-pager -l
+ps -ef | grep '[c]psrvd'
+journalctl -u cpanel --since '-30 min' --no-pager
+# cPanel-native restart wrapper - use only after evidence capture
+/usr/local/cpanel/scripts/restartsrv_cpsrvd
+Expected result: the cPanel unit is active and a cpsrvd process exists. A failed state, repeated restart loop, 
+segmentation fault, bind error, missing file, or permission denial identifies a service-level failure. If the service 
+restarts successfully, immediately inspect logs to determine why it stopped rather than closing the incident as 
+“fixed by restart.”
+Step 3 - Verify Listening Ports
+ss -ltnp | grep -E ':(2082|2083|2086|2087|2095|2096)\b'
+# Fallback on older systems
+netstat -lntp 2>/dev/null | grep -E ':(2082|2083|2086|2087|2095|2096)\b
+A LISTEN entry on 0.0.0.0:2083 or the expected interface proves that a process has bound the port. No listener 
+means the problem is below the firewall layer. A listener owned by an unexpected process indicates a port conflict 
+or unsupported proxy configuration.
+
+===== PAGE 9 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 9
+Step 4 - Check CSF, firewalld, nftables, and Provider ACLs
+# CSF checks
+csf -g 2083
+grep -E '^(TCP_IN|TCP6_IN)' /etc/csf/csf.conf
+csf -g CLIENT_PUBLIC_IP
+# firewalld / nftables / iptables checks
+firewall-cmd --list-all 2>/dev/null
+nft list ruleset 2>/dev/null | less
+iptables -S 2>/dev/null
+ip6tables -S 2>/dev/null
+The cPanel secure interface requires inbound TCP 2083; WHM normally uses 2087. If CSF is authoritative on the 
+host, do not create conflicting firewalld rules. Also verify the cloud provider security group or upstream firewall, 
+because a host-level allow rule cannot override an upstream deny.
+Safe Firewall Change
+Back up the firewall configuration, add only the required 
+secure port, reload the controlling firewall, and immediately 
+retest from an external client. Do not disable the firewall as a 
+permanent fix.
+Step 5 - Validate DNS and Hostname
+hostname -f
+dig +short A SERVER_HOSTNAME
+dig +short AAAA SERVER_HOSTNAME
+dig +trace SERVER_HOSTNAME
+getent ahosts SERVER_HOSTNAME
+# Compare public resolvers
+dig @1.1.1.1 SERVER_HOSTNAME A +short
+dig @8.8.8.8 SERVER_HOSTNAME A +short
+The hostname should resolve to the server’s intended public address. A stale AAAA record can cause IPv6-
+capable clients to fail even when IPv4 works. If a service subdomain is proxied through Cloudflare, test the native 
+hostname and port directly to separate Cloudflare from origin service health.
+Step 6 - Inspect the cPanel Hostname Certificate
+openssl s_client -connect SERVER_HOSTNAME:2083 -servername SERVER_HOSTNAME </dev/null 2>/dev/null \
+  | openssl x509 -noout -subject -issuer -serial -dates -ext subjectAltName
+# Refresh/check the cPanel service certificate when required
+/usr/local/cpanel/bin/checkallsslcerts
+Confirm that the current date is within the notBefore/notAfter range, the hostname appears in the Subject 
+Alternative Name, the chain is trusted, and the certificate returned externally is the same certificate expected on 
+the server. Certificate warnings alone do not prove that cpsrvd is down.
+Step 7 - Check Disk Space and Inodes
+df -hT
+df -i
+du -xhd1 /var 2>/dev/null | sort -h
+du -xhd1 /usr/local/cpanel 2>/dev/null | sort -h
+find /var/log -xdev -type f -size +500M -printf '%s %p\n' 2>/dev/null | sort -n
+
+===== PAGE 10 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 10
+A filesystem can have free gigabytes but no free inodes, so both df -h and df -i are required. Do not delete logs 
+blindly. Identify the growth source, preserve evidence, rotate or archive safely, and correct the generating service 
+or log-rotation failure. cPanel recommends maintaining free disk headroom rather than operating near 100 
+percent.
+Step 8 - Check Memory, Swap, and OOM Events
+free -m
+vmstat 1 5
+swapon --show
+dmesg -T | grep -Ei 'out of memory|oom-killer|killed process'
+journalctl -k --since '-2 hours' | grep -Ei 'oom|killed process'
+ps -eo pid,ppid,user,%mem,%cpu,stat,etime,cmd --sort=-%mem | head -25
+An OOM entry naming cpsrvd, cPanel Perl processes, PHP-FPM, database, or antivirus processes is direct 
+evidence. The final correction may require terminating a runaway process, adjusting workload concurrency, 
+adding memory, tuning services, or scheduling heavy jobs outside peak hours.
+Step 9 - Check CPU Load and Storage Latency
+uptime
+top -b -n1 | head -35
+ps -eo pid,user,stat,%cpu,%mem,etime,cmd --sort=-%cpu | head -25
+iostat -xz 1 5 2>/dev/null
+pidstat -dur 1 5 2>/dev/null
+Load average must be interpreted relative to CPU count and I/O wait. High load with high wa indicates storage 
+contention. High sy may indicate kernel or network overhead. A single runaway backup, compression, malware 
+scan, or database query can make cPanel appear unavailable without actually stopping the service.
+Step 10 - Review cPanel and System Logs
+tail -n 200 /usr/local/cpanel/logs/error_log
+tail -n 100 /usr/local/cpanel/logs/login_log
+tail -n 100 /usr/local/cpanel/logs/access_log
+journalctl -u cpanel --since '-2 hours' --no-pager
+tail -n 200 /var/log/messages 2>/dev/null
+tail -n 200 /var/log/secure 2>/dev/null
+Search around the exact failure time. Useful indicators include bind failures, certificate parse errors, “No space left 
+on device,” “Too many open files,” missing Perl modules, permission denied messages, authentication blocks, 
+segmentation faults, and OOM kills.
+Step 11 - Check cPanel License
+# Refresh the local license file after confirming public IP and entitlement
+/usr/local/cpanel/cpkeyclt
+# Confirm the server public IPv4 used for licensing
+curl -4 https://cpanel.net/showip.cgi 2>/dev/null || true
+If the license is expired, canceled, or attached to another public IP, renew or correct the license assignment, then 
+refresh the local license. Do not use license refresh as a substitute for verifying port and service health.
+Step 12 - Validate Package and Configuration Integrity
+/usr/local/cpanel/scripts/check_cpanel_pkgs --fix
+/usr/local/cpanel/scripts/upcp --force
+# Run the forced update only when package corruption/version mismatch is evidenced,
+# after backups and within an approved maintenance window.
+
+===== PAGE 11 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 11
+A forced update is a higher-impact action. It should follow evidence of missing or damaged cPanel packages, not 
+be used as the first response to a network timeout.
+3.4 How to Identify the Exact Root Cause
+Evidence Pattern Root Cause Conclusion
+No local listener; cpanel service failed; error log shows bind or 
+startup error
+cpsrvd startup/configuration failure
+Local curl succeeds; remote timeout; port absent from CSF/provider 
+allow list
+firewall or upstream ACL block
+Only one client fails; CSF/cPHulk contains client IP source-specific security block
+IP URL works; hostname resolves elsewhere DNS error
+IPv4 works; clients preferring IPv6 fail; stale AAAA exists IPv6 DNS/routing mismatch
+TLS output shows expired/mismatched certificate but HTTP 
+endpoint is reachable
+certificate/hostname issue
+Logs contain ENOSPC and df shows full filesystem disk or inode exhaustion
+Kernel log records OOM kill near outage memory exhaustion
+License check reports invalid/expired after server IP change license mismatch or expiration
+3.5 Resolution and Verification
+The final resolution depends on proven evidence. A representative case-study closure is shown below; it must not 
+be copied as the actual RCA unless the live server produces matching evidence.
+Illustrative Final RCA - cPanel
+cpsrvd was active and responded on 127.0.0.1:2083, but 
+remote connections timed out. CSF TCP_IN did not include 
+2083 after a firewall policy change. The secure cPanel port 
+was added to the approved inbound list, CSF was reloaded, 
+and the client IP was removed from a temporary deny list. 
+External curl and browser tests then returned the cPanel 
+login page. Root cause: incomplete firewall change 
+validation.
+Check Action / Evidence
+☐ https://SERVER_HOSTNAME:2083 opens externally without a 
+timeout.
+☐ The presented certificate is valid for the hostname.
+☐ A test cPanel user can authenticate and load key pages.
+☐ WHM on 2087 remains accessible to authorized administrators.
+☐ No new cpsrvd errors appear during a 15-30 minute observation 
+period.
+☐ Monitoring confirms the port and process remain healthy.
+3.6 Preventive Measures
+ Monitor TCP 2083/2087 externally and monitor cpsrvd locally.
+ Alert on disk capacity, inode use, memory pressure, swap use, OOM events, and high I/O wait.
+ Use approved firewall templates and peer review for port changes.
+ Track the cPanel license and public-IP changes in configuration management.
+ Enable certificate-expiry monitoring for the server hostname.
+ Retain and rotate cPanel/system logs; send critical logs to a remote collector.
+ Document a tested break-glass SSH path before control-panel changes.
+
+===== PAGE 12 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 12
+4. Issue 2 - SnappyMail (Webmail) Is Not Working
+4.1 Problem Decomposition
+“Webmail is not working” can describe several independent failures. The first task is to identify which operation 
+fails: opening the SnappyMail URL, loading the login page, authenticating, listing mail, opening a message, 
+sending a message, or receiving newly delivered mail.
+Failure Stage Likely Components
+URL does not open DNS, Cloudflare, firewall, Apache/Nginx, TLS, PHP-FPM, 
+application files
+Login page opens; login fails SnappyMail domain config, Dovecot authentication, IMAP 
+host/port/TLS, account status, brute-force block
+Login works; folders do not load IMAP service, mailbox permissions, quota, Dovecot indexes, 
+storage I/O
+Reading works; sending fails SMTP host/port/TLS/auth, Exim, routing, policy, queue
+Sending succeeds; delivery delayed Exim queue, DNS, remote rejection, rate limit, reputation, full 
+mailbox
+Only one domain fails SnappyMail domain mapping, MX/mail host, certificate coverage, 
+per-domain routing
+4.2 Possible Root Causes
+Potential Cause Technical Explanation
+Exim stopped Users may be unable to submit outgoing mail, and inbound SMTP 
+delivery may fail. This does not normally prevent the SnappyMail 
+login page from rendering.
+Dovecot stopped IMAP/POP3 authentication and mailbox access fail. SnappyMail 
+may show login failure or connection errors even while the web 
+application itself loads.
+SMTP failure Wrong SMTP hostname, port, encryption, authentication method, 
+firewall rule, or Exim listener prevents sending.
+IMAP failure Wrong IMAP hostname/port, Dovecot listener failure, TLS problem, 
+or network block prevents login and folder access.
+POP3 failure Relevant only if the deployment uses POP3; SnappyMail normally 
+relies primarily on IMAP for webmail.
+SSL/TLS expired or mismatched The web URL, IMAP endpoint, or SMTP endpoint may present an 
+invalid certificate or unsupported protocol configuration.
+Wrong MX record Inbound mail is delivered elsewhere or rejected. MX does not 
+control whether the SnappyMail web page loads, but it affects 
+receipt of mail.
+DNS error webmail.example.com, mail.example.com, or autodiscovery records 
+may point to the wrong server or a proxied endpoint that does not 
+support mail protocols.
+Authentication failure Incorrect password, disabled account, Dovecot auth backend error, 
+cPHulk/LFD block, clock issue, or username format mismatch.
+Mail queue growth Outbound mail may be delayed due to remote errors, DNS failures, 
+rate limiting, frozen messages, or routing issues.
+Permission / quota issue SnappyMail data directory may not be writable, or mailbox 
+ownership/quota may prevent Dovecot from accessing or updating 
+mail.
+PHP error Unsupported PHP version, missing extension, memory limit, fatal 
+error, PHP-FPM pool failure, or opcache corruption can cause blank 
+pages or HTTP 500.
+Database issue - conditional Base SnappyMail does not require a database. A DB is relevant 
+only when a plugin, address book, SSO, Nextcloud integration, or 
+custom session backend is configured.
+Application update/security issue Partial update, incompatible plugin, stale cache, or known 
+vulnerable/outdated release may break the UI and introduces 
+security risk.
+
+===== PAGE 13 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 13
+4.3 Step-by-Step Troubleshooting Procedure
+Step 1 - Determine Deployment Type and Application Path
+First determine whether SnappyMail is a standalone PHP application, a Nextcloud integration, a hosting-panel 
+plugin, or a reverse-proxied application. Paths and logs differ. Do not assume that cPanel’s native Webmail URL 
+is serving SnappyMail unless the server has been explicitly customized.
+find /home /var/www /usr/local -maxdepth 5 -type d -iname '*snappymail*' 2>/dev/null
+ps -ef | grep -E '[p]hp-fpm|[h]ttpd|[n]ginx'
+ss -ltnp | grep -E ':(80|443|143|993|25|465|587|110|995)\b
+Step 2 - Test the Web Application Layer
+curl -kIv https://webmail.example.com/
+curl -ksS -o /dev/null -w 'HTTP=%{http_code} TIME=%{time_total}\n' https://webmail.example.com/
+# Bypass public DNS/CDN and send the correct Host header to the origin
+curl -kIv --resolve webmail.example.com:443:ORIGIN_IP https://webmail.example.com/
+A 502/504 suggests proxy-to-backend failure. HTTP 500 suggests application/PHP failure. A redirect loop often 
+indicates incorrect base URL, proxy headers, or HTTP-to-HTTPS rules. If origin access works but the public URL 
+fails, focus on Cloudflare, DNS, WAF, or edge TLS.
+Step 3 - Check Apache, Nginx, PHP, and PHP-FPM
+systemctl status httpd --no-pager -l
+apachectl configtest
+systemctl status nginx --no-pager -l 2>/dev/null
+nginx -t 2>/dev/null
+systemctl list-units 'php*-php-fpm.service' --all --no-pager
+php -v
+php -m | sort
+# Common logs - confirm actual vhost paths
+tail -n 200 /usr/local/apache/logs/error_log 2>/dev/null
+tail -n 200 /var/log/httpd/error_log 2>/dev/null
+tail -n 200 /var/log/nginx/error.log 2>/dev/null
+Validate the application’s required PHP extensions and the exact PHP version assigned to its virtual host. A CLI 
+php -v result may differ from the PHP-FPM version used by the website, so inspect the cPanel MultiPHP/PHP-
+FPM configuration or pool file as appropriate.
+Step 4 - Check SnappyMail Files, Data Directory, and Logs
+# Replace with the discovered installation path
+APP=/path/to/snappymail
+stat "$APP"
+find "$APP" -maxdepth 3 -type d -printf '%M %u:%g %p\n' | head -80
+find "$APP" -maxdepth 3 -type f -name '*.log' -o -name 'application.ini' 2>/dev/null
+# Common SnappyMail/RainLoop-style data layout - installation dependent
+find "$APP/data" -maxdepth 6 -type f 2>/dev/null | grep -E 'application\.ini|domains|logs' | head 
+-100
+The web-server/PHP user must be able to write the configured SnappyMail data directory. Correct only the 
+specific ownership and mode required by the deployment; avoid chmod 777. Review application logs for PHP 
+exceptions, connection timeouts, certificate errors, plugin failures, and permission denials.
+
+===== PAGE 14 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 14
+Step 5 - Validate Dovecot and IMAP
+systemctl status dovecot --no-pager -l
+/usr/local/cpanel/scripts/restartsrv_dovecot
+dovecot -n
+ss -ltnp | grep -E ':(143|993|110|995)\b'
+# TLS handshake to IMAPS
+openssl s_client -connect mail.example.com:993 -servername mail.example.com -crlf </dev/null
+# Authentication test - avoid exposing real passwords in shell history
+doveadm auth test user@example.com
+Expected IMAPS behavior is a successful TLS handshake followed by an IMAP greeting. For authentication 
+troubleshooting, temporarily enable appropriate Dovecot auth verbosity, reproduce one test, collect the log, and 
+disable extra debugging. Never enable plaintext password logging on a production server unless formally 
+approved and tightly controlled.
+Step 6 - Validate Exim and SMTP Submission
+systemctl status exim --no-pager -l
+/usr/local/cpanel/scripts/restartsrv_exim
+ss -ltnp | grep -E ':(25|465|587)\b'
+# Queue and routing checks
+exim -bpc
+exim -bp | head -80
+exim -bt user@example.com
+# SMTP TLS handshake
+openssl s_client -starttls smtp -connect mail.example.com:587 -servername mail.example.com -crlf 
+</dev/null
+Exim queue size alone is not the root cause. Inspect the age and repeated error reason for queued messages. 
+Use exim -Mvh, -Mvb, and -Mvl only for a specific message ID and with care because message content may 
+contain sensitive data.
+Step 7 - Review Mail Logs
+tail -n 250 /var/log/exim_mainlog 2>/dev/null
+tail -n 150 /var/log/exim_rejectlog 2>/dev/null
+tail -n 150 /var/log/exim_paniclog 2>/dev/null
+tail -n 250 /var/log/maillog 2>/dev/null
+tail -n 250 /var/log/messages 2>/dev/null
+# Time- and account-focused search
+grep -i 'user@example.com' /var/log/exim_mainlog | tail -50
+grep -Ei 'dovecot|imap|auth|login failed' /var/log/maillog | tail -100
+Match a single controlled login/send attempt to log entries. This establishes whether SnappyMail reached 
+Dovecot or Exim, whether TLS succeeded, whether authentication passed, and where the request failed.
+Step 8 - Validate DNS, MX, and Mail Host Records
+dig +short MX example.com
+dig +short A mail.example.com
+dig +short AAAA mail.example.com
+dig +trace mail.example.com
+host -t MX example.com
+# Test authoritative server directly
+dig @ns1.example-dns.com example.com MX
+
+===== PAGE 15 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 15
+dig @ns1.example-dns.com mail.example.com A
+MX records must point to a hostname that resolves to the intended mail server. When Cloudflare is used, MX 
+records are never proxied, and a hostname dedicated to SMTP/IMAP should normally be DNS-only rather than 
+orange-cloud proxied.
+Step 9 - Check TLS for Web, IMAP, and SMTP Separately
+# Web HTTPS
+openssl s_client -connect webmail.example.com:443 -servername webmail.example.com </dev/null 
+2>/dev/null | openssl x509 -noout -subject -issuer -dates
+# IMAPS
+openssl s_client -connect mail.example.com:993 -servername mail.example.com </dev/null 2>/dev/null | 
+openssl x509 -noout -subject -issuer -dates
+# SMTP submission STARTTLS
+openssl s_client -starttls smtp -connect mail.example.com:587 -servername mail.example.com </dev/null 
+2>/dev/null | openssl x509 -noout -subject -issuer -dates
+The three endpoints may use different certificates. A valid website certificate does not prove that IMAP or SMTP 
+presents a valid certificate.
+Step 10 - Check Quotas, Storage, and Mailbox Permissions
+df -hT
+df -i
+repquota -a 2>/dev/null | head -80
+du -sh /home/CPANELUSER/mail/example.com/MAILUSER 2>/dev/null
+namei -l /home/CPANELUSER/mail/example.com/MAILUSER 2>/dev/null
+find /home/CPANELUSER/mail/example.com/MAILUSER -maxdepth 1 -printf '%M %u:%g %p\n' 2>/dev/null
+Mailbox quota and filesystem capacity can block delivery or index updates. Correct the quota or ownership 
+through supported cPanel mechanisms where possible, and avoid recursive ownership changes across all 
+mailboxes unless the scope and expected ownership are confirmed.
+Step 11 - Check Database Only If the Deployment Uses One
+mysqladmin ping
+systemctl status mariadb --no-pager -l
+mysql -e 'SHOW PROCESSLIST;'
+# Review application/plugin configuration before assuming a DB dependency.
+This step is conditional. The official SnappyMail project describes a database as unnecessary for the base client. 
+Therefore, a database outage is not a default explanation unless the server’s integration or plugin configuration 
+proves a dependency.
+4.4 Exact Root Cause Decision Matrix
+Evidence Pattern Conclusion
+Web URL returns 500; PHP log shows fatal error in 
+SnappyMail/plugin
+application/PHP/plugin failure
+Login page loads; SnappyMail log shows IMAP connection refused; 
+no 993 listener
+Dovecot/IMAP service failure
+IMAP auth succeeds with doveadm; SnappyMail fails using different 
+host/port
+SnappyMail domain configuration error
+Read works; send fails; Exim not listening on configured submission 
+port
+SMTP/Exim listener failure
+Exim accepts message; queue shows repeated remote DNS or 
+rejection errors
+delivery/routing/reputation issue, not UI failure
+Origin works with --resolve; public URL fails through Cloudflare edge DNS/proxy/WAF/TLS issue
+
+===== PAGE 16 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 16
+Evidence Pattern Conclusion
+Only one account fails; Dovecot logs quota/permission error mailbox-specific quota or permission issue
+4.5 Resolution, Verification, and Preventive Measures
+Illustrative Final RCA - SnappyMail
+The SnappyMail login page loaded, but every login returned 
+an IMAP connection error. Port 993 had no listener and 
+Dovecot was inactive. /var was 100% full because an 
+application log had grown without rotation; Dovecot failed 
+when writing state and did not recover after reboot. The log 
+was archived, rotation was corrected, disk headroom was 
+restored, Dovecot was started, and an IMAP authentication 
+test succeeded. Root cause: uncontrolled log growth plus 
+missing capacity alerting.
+Check Action / Evidence
+☐ SnappyMail URL returns HTTP 200 and loads without PHP 
+errors.
+☐ A test user can authenticate and list folders.
+☐ A test message can be sent through authenticated SMTP 
+submission.
+☐ The message appears in Exim logs and reaches a controlled 
+external mailbox.
+☐ A reply is received through the correct MX path and appears in 
+SnappyMail.
+☐ No new Dovecot, Exim, PHP-FPM, or application errors appear 
+during observation.
+ Monitor HTTP response, IMAPS login capability, SMTP submission, queue size/age, and certificate expiry 
+separately.
+ Keep SnappyMail and plugins on supported, security-patched versions and back up the data/config directory before 
+updates.
+ Use log rotation and disk/inode alerts; maintain mailbox and filesystem headroom.
+ Keep mail host records DNS-only when they serve non-HTTP protocols through Cloudflare DNS.
+ Document IMAP/SMTP hostnames, ports, encryption modes, and authentication format.
+ Use rate limiting and brute-force protection without blocking legitimate support tests.
+
+===== PAGE 17 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 17
+5. Issue 3 - Some Subdomains Do Not Open While the Main 
+Domain Works
+5.1 Why This Symptom Is Valuable
+A working main domain proves that at least part of the DNS and web stack is functional, but it does not prove that 
+every subdomain has a DNS record, certificate, virtual host, correct document root, or Cloudflare configuration. 
+Each failing hostname must be tested independently.
+5.2 Possible Root Causes
+Potential Cause Technical Explanation
+Missing DNS record The subdomain has no A, AAAA, or CNAME record at the 
+authoritative DNS provider.
+Wrong A/AAAA record The subdomain points to an old server, private address, wrong 
+IPv4, or broken IPv6 address.
+CNAME issue The target does not resolve, creates a loop, points across an 
+unsupported proxy setup, or conflicts with another record.
+VirtualHost missing Apache has no ServerName/ServerAlias entry for the hostname, so 
+the request reaches a default site.
+Apache configuration error Invalid include, broken user-data metadata, or failed rebuild 
+prevents the expected vhost from loading.
+Nginx server block missing The proxy does not contain the hostname in server_name or 
+forwards to the wrong upstream.
+SSL missing or wrong The subdomain is not included in a certificate, AutoSSL validation 
+failed, or Cloudflare edge/origin modes are inconsistent.
+Wrong document root The vhost points to a nonexistent, empty, or incorrect directory.
+Permission or SELinux denial The web server cannot traverse the path or read the application 
+files.
+DNS propagation/caching Authoritative DNS is correct, but recursive caches still serve an old 
+record until TTL expiry.
+Cloudflare proxy/WAF issue Origin IP blocked, SSL mode mismatch, WAF rule, cache, or proxy 
+status differs from the main domain.
+Application-specific failure The vhost works, but the subdomain application returns 500, 
+redirects incorrectly, or cannot reach its backend/database.
+5.3 Step-by-Step Troubleshooting Procedure
+Step 1 - Build a Hostname Inventory
+Hostname Expected IP/Target Expected Service Observed Error
+example.com 203.0.113.10 Main website Works
+app.example.com 203.0.113.10 Application Timeout / 5xx / DNS error
+api.example.com 203.0.113.10 API Timeout / 5xx / DNS error
+mail.example.com 203.0.113.10 Mail host Do not proxy non-HTTP mail 
+protocols
+Record exact errors for each hostname. Do not group “some subdomains” into one incident until evidence shows 
+a common cause.
+Step 2 - Check Authoritative DNS
+dig NS example.com +short
+dig app.example.com A +noall +answer
+dig app.example.com AAAA +noall +answer
+dig app.example.com CNAME +noall +answer
+dig +trace app.example.com
+# Query an authoritative server directly
+dig @AUTHORITATIVE_NS app.example.com A +noall +answer
+
+===== PAGE 18 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 18
+If the authoritative server has no record, the root cause is DNS configuration. If authoritative DNS is correct but 
+public resolvers differ, inspect TTL and propagation. Check for an unexpected AAAA record because clients may 
+prefer IPv6.
+Step 3 - Test the Origin Independently of DNS and Cloudflare
+# HTTP origin test with Host header
+curl -Iv -H 'Host: app.example.com' http://ORIGIN_IP/
+# HTTPS origin test with SNI and forced resolution
+curl -kIv --resolve app.example.com:443:ORIGIN_IP https://app.example.com/
+# Certificate served by the origin
+openssl s_client -connect ORIGIN_IP:443 -servername app.example.com </dev/null 2>/dev/null \
+  | openssl x509 -noout -subject -issuer -dates -ext subjectAltName
+If the origin works with --resolve but the public hostname fails, DNS/Cloudflare is implicated. If the origin returns 
+the wrong site, inspect virtual-host selection. If the TCP connection fails at the origin, inspect listeners and firewall 
+rules.
+Step 4 - Inspect Apache VirtualHost Mapping
+apachectl configtest
+apachectl -S
+grep -Rni --include='*.conf' 'app.example.com' /etc/apache2 /usr/local/apache/conf 2>/dev/null
+# cPanel metadata examples - replace USER and hostname
+ls -l /var/cpanel/userdata/USER/
+grep -Rni 'app.example.com' /var/cpanel/userdata/USER 2>/dev/null
+# Rebuild only after backing up and validating metadata
+cp -a /etc/apache2/conf/httpd.conf /root/httpd.conf.$(date +%F-%H%M%S).bak 2>/dev/null || true
+/usr/local/cpanel/scripts/rebuildhttpdconf
+apachectl configtest
+/usr/local/cpanel/scripts/restartsrv_httpd
+apachectl -S reveals which virtual host owns each address/port and which vhost is default. On a cPanel server, 
+persistent changes should be made through cPanel-supported userdata/includes or the control panel, not by 
+editing generated httpd.conf without a supported override mechanism.
+Step 5 - Inspect Nginx Reverse-Proxy Configuration
+nginx -t
+nginx -T 2>/dev/null | grep -n -A6 -B4 'app.example.com'
+ss -ltnp | grep -E ':(80|443)\b'
+# Reload only after a successful configuration test
+systemctl reload nginx
+The server_name directive determines which Nginx server block handles the Host header. Confirm the exact 
+hostname, listen address, TLS certificate, and proxy_pass upstream. A default server response indicates that the 
+hostname did not match the intended block.
+Step 6 - Verify Document Root and Permissions
+# Use the actual DocumentRoot discovered from Apache/Nginx configuration
+DOCROOT=/home/USER/public_html/app
+stat "$DOCROOT"
+namei -l "$DOCROOT"
+find "$DOCROOT" -maxdepth 2 -printf '%M %u:%g %p\n' | head -80
+
+===== PAGE 19 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 19
+# Check for application entry files
+find "$DOCROOT" -maxdepth 1 -type f -printf '%f\n' | sort
+The web server must be able to traverse each parent directory and read required files. Correct the smallest 
+incorrect ownership or mode. Avoid broad recursive chmod/chown actions because they can break cPanel 
+ownership, application security, or suPHP/PHP-FPM behavior.
+Step 7 - Check SSL and AutoSSL Coverage
+openssl s_client -connect app.example.com:443 -servername app.example.com </dev/null 2>/dev/null \
+  | openssl x509 -noout -subject -issuer -dates -ext subjectAltName
+# Check common AutoSSL log location - version dependent
+find /var/cpanel/logs/autossl -type f -mtime -7 -maxdepth 3 2>/dev/null | tail -20
+Confirm that the hostname is included in the certificate. If AutoSSL validation failed, resolve DNS/DCV 
+reachability first, then rerun AutoSSL. A wildcard certificate covers one label level such as *.example.com, but not 
+deeper names such as a.b.example.com unless separately covered.
+Step 8 - Check Cloudflare Configuration
+ Confirm that the failing subdomain exists in the active Cloudflare zone and points to the correct origin.
+ Compare proxy status with the main domain. HTTP/HTTPS applications may be proxied; mail-only hostnames 
+should be DNS-only.
+ Use Full (strict) only when the origin presents a valid certificate for the hostname.
+ Ensure the origin firewall allows current Cloudflare IP ranges when access is restricted to the proxy.
+ Review WAF, rate-limit, access, redirect, and cache rules scoped to the failing hostname.
+ Use origin --resolve testing to prove whether the fault is at Cloudflare or the origin.
+Step 9 - Review Web and Application Logs
+# cPanel/Apache common paths - confirm vhost-specific logs
+tail -n 200 /usr/local/apache/logs/error_log 2>/dev/null
+tail -n 200 /var/log/httpd/error_log 2>/dev/null
+# Nginx
+tail -n 200 /var/log/nginx/error.log 2>/dev/null
+# Search by hostname and incident time
+grep -Ri 'app.example.com' /usr/local/apache/domlogs /var/log/httpd /var/log/nginx 2>/dev/null | tail 
+-100
+A request absent from origin access logs indicates that it never reached the origin. A request present with 
+404/403/500 identifies the web or application layer. Correlate request ID, timestamp, client/Cloudflare IP, 
+upstream status, and application exception.
+Step 10 - Check Cache and Client-Side Resolution
+getent ahosts app.example.com
+nslookup app.example.com
+# Compare from multiple resolvers
+dig @1.1.1.1 app.example.com A +short
+dig @8.8.8.8 app.example.com A +short
+# Browser/client steps: clear DNS cache, test private window, and test another network.
+Client cache is confirmed only when authoritative DNS and independent resolvers are correct while one client 
+continues to use stale data. It should not be used as a generic explanation without comparison evidence.
+
+===== PAGE 20 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 20
+5.4 Exact Root Cause Decision Matrix
+Evidence Pattern Conclusion
+NXDOMAIN from authoritative DNS missing authoritative record
+Authoritative A record points to old IP wrong DNS record
+Public DNS correct; --resolve to origin returns wrong site; apachectl 
+-S lacks hostname
+missing/misgenerated Apache vhost
+Apache vhost correct; Nginx -T lacks server_name Nginx reverse-proxy mapping failure
+HTTP works; HTTPS certificate omits hostname SSL/AutoSSL coverage failure
+Origin works; Cloudflare returns 52x or WAF block Cloudflare-to-origin or edge policy issue
+Access log shows 403; namei shows non-traversable parent filesystem permission issue
+Request reaches correct vhost but application log shows exception application/backend failure
+5.5 Resolution, Verification, and Prevention
+Illustrative Final RCA - Subdomains
+The main domain had a correct proxied A record, but 
+app.example.com had no authoritative DNS record after a 
+migration. After the A record was added, origin testing 
+exposed a second issue: the cPanel Apache userdata for 
+the subdomain existed but the generated vhost was stale. 
+The Apache configuration was rebuilt using the cPanel 
+script, configtest returned Syntax OK, Apache was restarted, 
+and AutoSSL was rerun. Root cause: incomplete migration 
+checklist and missing post-change validation.
+Check Action / Evidence
+☐ Authoritative DNS returns the correct A/AAAA/CNAME 
+response.
+☐ Public resolvers converge to the expected value.
+☐ curl --resolve reaches the correct origin virtual host.
+☐ HTTP redirects to HTTPS only as intended; no loop is present.
+☐ The TLS certificate covers the exact hostname.
+☐ The application returns the expected status and content.
+☐ Cloudflare proxy/WAF behavior is validated if enabled.
+ Use a migration/change checklist covering DNS, vhost, document root, TLS, proxy, and external validation for every 
+hostname.
+ Maintain DNS-as-code or export zone changes for review and rollback.
+ Monitor critical subdomains individually rather than monitoring only the apex domain.
+ Run Apache/Nginx configuration tests before reloads and after automated rebuilds.
+ Track certificate coverage for every production hostname.
+ Avoid unsupported direct edits to generated cPanel configuration files.
+
+===== PAGE 21 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 21
+6. Unified Troubleshooting and RCA Methodology
+6.1 Symptom-to-Layer Workflow
+Professional troubleshooting flowchart
+START
+  |
+  v
+Capture exact URL, error, time, user, source IP, and affected scope
+  |
+  v
+Can the service be reached locally on loopback/origin?
+  |-- NO --> Check process -> listener -> resources -> logs -> configuration
+  |
+  |-- YES --> Check host firewall -> upstream ACL -> DNS -> proxy/CDN -> client path
+  |
+  v
+Does TLS complete and present the correct certificate?
+  |-- NO --> Fix certificate/SNI/protocol/clock/chain
+  |
+  v
+Does the application return the expected HTTP/protocol response?
+  |-- NO --> Check vhost, PHP/app, IMAP/SMTP, backend, permissions, quota
+  |
+  v
+Apply the smallest evidence-based correction
+  |
+  v
+Validate locally + externally + real user workflow
+  |
+  v
+Document RCA, contributing factors, prevention, owner, and due date
+  |
+  v
+CLOSE
+6.2 The Five-Layer Isolation Model
+Layer Question Typical Tools
+1. Process/Application Is the correct service running and healthy? systemctl, ps, journalctl, app logs
+2. Socket/Protocol Is the expected port listening and 
+completing the protocol/TLS handshake?
+ss, curl, openssl s_client
+3. Host Security/Resources Is the host blocking or starving the service? CSF, nft, df, free, vmstat, dmesg
+4. Name/Proxy/Route Does the hostname reach the intended 
+origin and virtual host?
+dig, trace, --resolve, Apache/Nginx dumps
+5. User Workflow Can the user authenticate and complete the 
+business action?
+browser test, IMAP login, SMTP send, end-
+to-end validation
+6.3 Difference Between Symptom, Cause, and Root Cause
+Category Example
+Symptom SnappyMail says “Authentication failed.”
+Immediate technical cause Dovecot cannot read the user database because the filesystem 
+is read-only/full.
+Root cause A failed log-rotation policy filled /var; no capacity alert existed; 
+Dovecot stopped and the service monitor did not recover it.
+Corrective action Restore disk headroom, repair rotation, start Dovecot, validate 
+authentication.
+Preventive action Add disk/inode forecasting, log-growth alert, service 
+dependency monitor, and monthly restore/test review.
+
+===== PAGE 22 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 22
+6.4 RCA Template for Incident Closure
+RCA Field Required Content
+Incident summary What users could not do, affected services/domains, and duration.
+Timeline First failure, detection, investigation milestones, change, recovery, 
+validation, closure.
+Technical root cause Specific failed component and failure mechanism supported by 
+evidence.
+Trigger Change, resource threshold, certificate expiry, reboot, update, traffic 
+event, or external dependency.
+Contributing factors Monitoring gaps, weak change review, stale documentation, 
+insufficient capacity, unsupported customization.
+Recovery action Commands/configuration changes performed, backups taken, and 
+rollback plan.
+Validation evidence Local and external tests, user workflow, logs, and monitoring status.
+Preventive actions Owner, due date, priority, and measurable completion criteria.
+
+===== PAGE 23 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 23
+7. Linux and cPanel Command Reference
+The commands below are diagnostic examples. Run them as root only where necessary, protect credentials and 
+message content, and confirm the active operating-system and cPanel version. Sample outputs are abbreviated.
+Command Purpose Expected Output Common Error Best Practice
+ssh root@server Open an encrypted 
+administrative shell.
+Successful login prompt. Wrong key, blocked port 22, 
+disabled root login.
+Use keys, MFA/bastion 
+where available; restrict 
+source IPs.
+systemctl status SERVICE Show service state and 
+recent messages.
+active (running) failed, inactive, start-limit-hit Capture output before 
+restart.
+systemctl restart SERVICE Stop and start a systemd 
+service.
+Command exits 0. Restart fails or service 
+immediately exits.
+Use only after config 
+test/evidence capture.
+service SERVICE status Compatibility wrapper on 
+older systems.
+running unrecognized service Prefer systemctl on systemd 
+hosts.
+journalctl -u SERVICE Read systemd journal for 
+one unit.
+Timestamped service 
+events.
+No entries if service logs 
+elsewhere.
+Use --since and --no-pager.
+ps -ef / ps -eo ... List processes and resource 
+use.
+PID, user, command. Defunct or runaway process. Filter precisely; do not kill 
+blindly.
+top / htop Interactive 
+CPU/memory/process view.
+Load, CPU, RAM, 
+processes.
+High wa, high load, swap 
+pressure.
+Use batch mode for 
+evidence.
+ss -ltnp List listening TCP sockets 
+and owners.
+LISTEN with PID/program. Expected port absent. Preferred over netstat.
+netstat -lntp Legacy socket listing. LISTEN entries. Command not installed. Use only as fallback.
+df -hT Filesystem capacity by type. Size, used, available. 100% used. Pair with df -i.
+df -i Filesystem inode capacity. IUse%, IFree. 100% inodes despite free 
+GB.
+Alert before exhaustion.
+du -xhd1 PATH Find large directories on one 
+filesystem.
+Sorted directory sizes. Permission or long runtime. Use -x and targeted paths.
+free -m Memory and swap summary. available memory and swap. Very low available; swap full. Use with vmstat/OOM logs.
+vmstat 1 5 CPU, run queue, paging, I/O 
+samples.
+r, b, si, so, wa. Sustained swap-in/out or 
+high wa.
+Use multiple samples.
+dig NAME TYPE Query DNS records. ANSWER section. NXDOMAIN, SERVFAIL, 
+stale result.
+Query authoritative and 
+public resolvers.
+nslookup NAME Simple resolver query. Address and server. Non-authoritative/stale 
+output.
+Prefer dig for full diagnosis.
+host NAME Compact DNS lookup. Address/MX output. not found / SERVFAIL. Useful for quick 
+confirmation.
+ping HOST Basic ICMP 
+reachability/latency.
+Replies and packet loss. Blocked ICMP is not proof of 
+outage.
+Do not equate ping failure 
+with service failure.
+traceroute HOST Show routed hops. Hop sequence. Stars due to filtering. Use as supporting evidence 
+only.
+curl -kIv URL Test HTTP/TLS with verbose 
+headers.
+Status, certificate, 
+connection.
+Timeout, refusal, 4xx/5xx. Avoid -k for final trust 
+validation.
+wget --spider URL Check fetchability without 
+saving content.
+HTTP response. TLS/DNS/connect error. Useful secondary HTTP 
+client.
+tail -n 200 FILE Read recent log lines. Latest events. Rotated file or wrong path. Use timestamps and 
+preserve excerpts.
+grep -Ei PATTERN FILE Search logs/config. Matching lines. Binary/rotated/compressed 
+file.
+Quote patterns; avoid broad 
+costly recursion.
+awk / sed Extract or transform text. Selected columns/lines. Incorrect field assumptions. Read-only use first; back up 
+before in-place edit.
+cat / less FILE Read text/configuration. File content. Permission denied/huge file. Use less for large files.
+chmod MODE PATH Change file mode. No output on success. Breaks app/security if too 
+broad.
+Never use 777 as generic 
+fix.
+chown USER:GROUP PATH Change ownership. No output on success. Wrong recursive ownership. Confirm cPanel/application 
+ownership first.
+find PATH ... Locate files or inspect 
+permissions/sizes.
+Matching paths. Large scan load. Limit filesystem/depth and 
+quote paths.
+locate NAME Search prebuilt filename 
+database.
+Fast matching paths. Database stale/not installed. Verify with stat/find.
+firewall-cmd --list-all Show firewalld zone policy. Services/ports/sources. firewalld inactive. Identify authoritative firewall 
+first.
+iptables -S / nft list ruleset Show packet-filter rules. Rule set. Wrong backend or large 
+output.
+Save output before changes.
+apachectl configtest Validate Apache syntax. Syntax OK. File/line syntax error. Required before 
+restart/reload.
+apachectl -S Dump Apache vhost 
+mapping.
+Namevhost list/defaults. Hostname absent/misbound. Key tool for subdomain 
+cases.
+
+===== PAGE 24 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 24
+Command Purpose Expected Output Common Error Best Practice
+nginx -t Validate Nginx config and 
+referenced files.
+syntax is ok; test successful. Missing cert, duplicate/bad 
+directive.
+Never reload after failed test.
+nginx -T Dump complete Nginx 
+configuration.
+Merged config to stdout. Sensitive paths/content. Store securely; use for 
+server_name tracing.
+mysqladmin ping Check DB responsiveness. mysqld is alive. Access denied or connection 
+failure.
+DB is conditional for base 
+SnappyMail.
+openssl s_client ... Inspect TLS 
+handshake/certificate/protoc
+ol.
+Certificate chain and 
+handshake.
+Timeout, alert, name 
+mismatch.
+Always pass -servername 
+for SNI.
+hostnamectl Show/set host identity and 
+OS details.
+Static hostname, OS, kernel. Incorrect FQDN. Do not change hostname 
+during incident without plan.
+timedatectl Show time, zone, NTP sync. System clock synchronized. Clock drift / NTP inactive. Clock errors break TLS and 
+auth.
+/usr/local/cpanel/scripts/
+restartsrv_SERVICE
+cPanel-supported service 
+restart wrapper.
+Restart success/status. Service-specific error. Prefer for cPanel-managed 
+services.
+/usr/local/cpanel/scripts/
+rebuildhttpdconf
+Regenerate Apache config 
+from cPanel metadata.
+Config rebuilt. Bad userdata/config data. Back up and run configtest 
+afterward.
+/usr/local/cpanel/cpkeyclt Refresh cPanel license file. License update message. Invalid/expired/no license for 
+IP.
+Confirm entitlement and 
+public IP.
+
+===== PAGE 25 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 25
+8. Important Log Files
+Log / Location Purpose Example Evidence Troubleshooting Use
+/usr/local/cpanel/logs/error_log cPanel/cpsrvd application errors Exceptions, startup failures, 
+certificate or module errors
+Correlate with cPanel access time.
+/usr/local/cpanel/logs/access_log Requests to cPanel/WHM 
+interfaces
+Client IP, request, status Confirm whether request reached 
+cpsrvd.
+/usr/local/cpanel/logs/login_log cPanel/WHM login attempts Success/failure and source Identify authentication or source 
+block.
+/usr/local/cpanel/logs/cpwrapd_log cPanel privileged wrapper activity Privileged function calls/errors Useful for permission/wrapper 
+failures.
+/var/log/messages General system/service messages 
+on RHEL-family systems
+Daemon, kernel, service events Search around incident 
+timestamp.
+journalctl systemd and kernel journal Unit transitions, OOM, restart 
+failures
+Use -u, -k, and --since filters.
+/var/log/secure SSH/sudo/auth security events Login failures, PAM events Check admin access and blocks.
+/usr/local/apache/logs/error_log Common cPanel Apache error log Vhost, module, permission, PHP 
+proxy errors
+Confirm actual path on server.
+/usr/local/apache/domlogs/
+DOMAIN
+cPanel per-domain access logs Requests/status for 
+domain/subdomain
+Proves request reached a vhost.
+/var/log/httpd/error_log Standard RHEL Apache error log Syntax/runtime errors May differ on cPanel.
+/var/log/nginx/error.log Nginx proxy and TLS errors Upstream timeout, no live 
+upstream, certificate error
+Compare upstream status and 
+server_name.
+/var/log/exim_mainlog Exim message processing Accept, route, deliver, defer, reject Trace message ID end-to-end.
+/var/log/exim_rejectlog Rejected SMTP transactions Policy/auth/recipient rejection Separate intended policy from 
+fault.
+/var/log/exim_paniclog Serious Exim errors Critical configuration/runtime faults Any new entry requires 
+investigation.
+/var/log/maillog Dovecot/mail authentication and 
+protocol events
+IMAP login, auth failure, 
+disconnect
+Use account/session ID 
+correlation.
+SnappyMail data/log directory Application-specific logs PHP exception, IMAP/SMTP 
+connection error
+Path depends on deployment.
+PHP-FPM pool/error log PHP worker and application 
+failures
+Fatal error, max children, timeout Verify pool used by vhost.
+/var/cpanel/logs/autossl/ 
+(common)
+AutoSSL validation/run 
+information
+DCV failure, excluded domain, 
+certificate action
+Path/version may vary; WHM UI is 
+authoritative.
+8.1 Log Analysis Technique
+# Define a narrow time window and search terms
+journalctl --since '2026-07-22 14:00:00' --until '2026-07-22 14:20:00'
+grep -Ei 'error|failed|denied|timeout|no space|oom|killed' /path/to/log | tail -200
+# Follow a controlled test in real time
+tail -F /var/log/maillog /var/log/exim_mainlog
+# Perform exactly one login/send test, then stop tail and preserve the matching lines.
+Privacy and Security
+Mail logs and queue inspection can expose addresses, 
+subject lines, IPs, authentication identifiers, and message 
+content. Collect only what is necessary, redact secrets in the 
+submitted RCA, and never paste real passwords or private 
+keys into commands, tickets, or screenshots.
+
+===== PAGE 26 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 26
+9. Important Configuration Files and Data Sources
+Path / Source Purpose Important Settings Operational Notes
+/etc/csf/csf.conf CSF inbound/outbound ports and 
+security policy
+TCP_IN, TCP6_IN, allow/deny 
+behavior
+Back up before edit; reload CSF 
+and externally test.
+/etc/firewalld/ and nftables rules Host packet-filter configuration Zones, services, ports, sources Avoid managing two conflicting 
+firewall systems.
+/etc/hosts, /etc/resolv.conf Local name mapping and resolver 
+settings
+Hostname IP, nameservers, 
+search domains
+Check for stale local overrides and 
+resolver failures.
+/etc/hostname / hostnamectl Server hostname identity FQDN consistency Hostname affects cPanel service 
+certificate and mail identity.
+/etc/apache2/conf/httpd.conf or 
+cPanel-generated equivalent
+Apache main configuration Includes, listeners, vhosts Do not make unsupported 
+persistent edits to generated file.
+/var/cpanel/userdata/USER/* cPanel source metadata for 
+Apache domains
+ServerName, documentroot, IP, 
+SSL data
+Validate before rebuildhttpdconf.
+/usr/local/apache/conf/userdata/... cPanel-supported custom Apache 
+includes
+Per-user/domain overrides Use correct scope/version and 
+rebuild safely.
+/etc/nginx/nginx.conf and included 
+server files
+Nginx global and vhost/proxy 
+configuration
+listen, server_name, 
+ssl_certificate, proxy_pass
+Run nginx -t before reload.
+PHP-FPM pool files / MultiPHP 
+configuration
+PHP runtime per site/account user/group, socket, limits, version CLI PHP may not match site PHP.
+SnappyMail application.ini and 
+domain configs
+Webmail behavior and 
+IMAP/SMTP endpoints
+Hosts, ports, TLS, logging, plugins Common path is within 
+SnappyMail data tree; deployment 
+dependent.
+/etc/dovecot/dovecot.conf and 
+conf.d includes
+Dovecot 
+protocols/auth/TLS/listeners
+auth, passdb/userdb, ssl, services On cPanel, use supported 
+configuration interfaces/hooks.
+/etc/exim.conf or cPanel-managed 
+Exim configuration
+SMTP routing, ACLs, transports, 
+authenticators
+listeners, ACL policy, routers, TLS Use WHM Exim Configuration 
+Manager where appropriate.
+/var/named/example.com.db 
+(common)
+Local authoritative DNS zone file A, AAAA, CNAME, MX, TXT, 
+serial
+cPanel/DNS cluster may be 
+authoritative elsewhere.
+/etc/named.conf DNS server zones and includes zone declarations, listen/allow 
+settings
+Run named-checkconf/zone 
+checks when applicable.
+/etc/letsencrypt/renewal/*.conf Certbot certificate renewal settings authenticator, webroot, domains, 
+hooks
+Back up changes and test with 
+renew --dry-run.
+Cloudflare zone settings Authoritative DNS, proxy, WAF, 
+SSL mode
+Record content, proxy status, 
+edge cert, rules
+Not stored locally unless managed 
+as code.
+9.1 Configuration Change Safety
+# Standard reversible-change pattern
+cp -a /path/to/config /root/backups/config.$(date +%F-%H%M%S).bak
+# Edit the supported source file or control-panel interface
+# Then validate syntax
+apachectl configtest
+nginx -t
+dovecot -n
+# Reload/restart only the affected service
+systemctl reload nginx
+/usr/local/cpanel/scripts/restartsrv_httpd
+# Validate service, port, logs, and user workflow immediately.
+10. Preventive Best Practices
+Control Area Recommended Practice
+Monitoring External HTTPS checks for cPanel and critical subdomains; 
+protocol checks for IMAP/SMTP; local process and port monitors.
+Capacity Alerts at warning/critical thresholds for disk, inodes, memory, swap, 
+load, I/O wait, mailbox quota, and queue age.
+Backups Automated cPanel account and system configuration backups, 
+
+===== PAGE 27 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 27
+Control Area Recommended Practice
+encrypted off-server copies, and scheduled restore tests.
+SSL renewal AutoSSL/Certbot automation plus independent certificate-expiry 
+monitoring for hostname, subdomains, IMAP, and SMTP.
+Firewall security Least-privilege inbound rules, peer-reviewed changes, source 
+allowlists for administration, and documented provider ACLs.
+Log rotation Rotation, retention, compression, remote shipping, and alerts for 
+abnormal daily growth or panic logs.
+Patch management Supported OS/cPanel/PHP/SnappyMail versions, staged updates, 
+maintenance windows, and rollback plans.
+High availability Where business impact justifies it: redundant DNS, mail continuity, 
+replicated applications, load balancers, or tested failover.
+Disaster recovery Document RTO/RPO, backups, credentials escrow, rebuild steps, 
+DNS failover, and regular recovery exercises.
+Change management Ticket, risk, backup, implementation, validation, rollback, owner, 
+and post-change observation for every production change.
+Security MFA, SSH keys, least privilege, cPHulk/CSF tuning, malware 
+scanning, audit logs, secret management, and vulnerability 
+response.
+Documentation Current architecture diagram, hostname/port inventory, DNS 
+ownership, certificate inventory, service dependencies, and 
+runbooks.
+10.1 Suggested Monitoring Checks and Alert Thresholds
+Check Warning Example Critical Example Validation
+Filesystem use >= 80% >= 90% or rapid growth df -hT; trend dashboard
+Inode use >= 75% >= 90% df -i
+Available memory Sustained low available memory OOM event or swap thrashing free, vmstat, kernel log
+cPanel port Slow/failed one probe Two or more failed external 
+probes
+HTTPS 2083 with correct 
+certificate
+IMAPS Handshake/login latency high Connection/auth probe fails 993 TLS + controlled account
+SMTP submission Latency/temporary failure Connection/auth/send probe 
+fails
+587 STARTTLS + controlled 
+delivery
+Exim queue Unusual count or oldest age Sustained growth / frozen 
+messages
+exim -bpc and queue age
+Certificate < 30 days < 14 days or invalid openssl/API certificate inventory
+Subdomain HTTP High latency or unexpected 
+status
+Repeated non-2xx/expected 
+status
+External URL check and content 
+match
+11. Final Interview-Ready Incident Checklist
+Check Action / Evidence
+☐ Restate the symptom as a measurable technical failure.
+☐ Confirm business impact, affected scope, exact time, and 
+recent changes.
+☐ Test local loopback/origin before remote path.
+☐ Check service state and listening port before firewall or DNS 
+assumptions.
+☐ Check disk, inodes, memory, OOM, CPU, and I/O before 
+repeated restarts.
+☐ Review the correct logs around one controlled reproduction 
+attempt.
+☐ Validate DNS at the authoritative server and compare recursive 
+resolvers.
+☐ Validate TLS with SNI for every endpoint: web, cPanel, IMAP, 
+and SMTP.
+☐ Back up configuration and run syntax checks before 
+
+===== PAGE 28 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 28
+Check Action / Evidence
+reload/restart.
+☐ Apply the smallest supported fix and retain rollback capability.
+☐ Verify locally, externally, and through the actual user workflow.
+☐ Observe stability, document evidence, create RCA, and assign 
+preventive actions.
+11.1 Example Closure Summary
+All three reported symptoms were investigated using layer isolation. cPanel reachability was separated into local 
+cpsrvd health and remote firewall access; SnappyMail was separated into web application, IMAP, SMTP, DNS, 
+TLS, and quota components; and subdomain failures were separated into authoritative DNS, Cloudflare, virtual-
+host selection, certificate coverage, document root, and application behavior. Each illustrative resolution includes 
+a specific evidence chain, a limited corrective change, end-to-end validation, and a preventive control.
+12. Conclusion
+Effective server troubleshooting is a disciplined evidence process, not a sequence of guesses. The engineer must 
+identify the failing layer, preserve useful evidence, understand the distinction between cPanel’s cpsrvd service 
+and the hosted web stack, separate webmail UI availability from IMAP/SMTP functionality, and prove DNS and 
+virtual-host behavior for each subdomain independently.
+The most reliable workflow is to begin with scope and local reachability, then verify service state, sockets, 
+resources, logs, firewall, DNS, TLS, configuration, and the user workflow. The final fix must be supported by 
+evidence, validated from multiple perspectives, and followed by an RCA that addresses the detection and process 
+gaps that allowed the incident to occur.
+This approach minimizes unnecessary changes, shortens recovery time, protects data and security, and produces 
+documentation that another engineer can repeat. It demonstrates the Linux, cPanel, DNS, mail-server, web-
+server, and logical troubleshooting skills expected from a Technical Support Engineer.
+13. References
+The following official or primary documentation sources were consulted. Product behavior and file paths can 
+change by version; the live server documentation and configuration remain authoritative.
+ID Official Source Link
+R1 cPanel & WHM - The cPanel & WHM Service 
+Daemons
+https://docs.cpanel.net/knowledge-
+base/cpanel-product/the-cpanel-
+service-daemons/
+R2 cPanel & WHM - Firewall Ports for cPanel 
+Services
+https://docs.cpanel.net/knowledge-
+base/general-systems-
+administration/how-to-configure-
+your-firewall-for-cpanel-services/
+R3 cPanel & WHM - cPanel Log Files https://docs.cpanel.net/knowledge-
+base/cpanel-product/the-cpanel-
+log-files/
+R4 cPanel & WHM - The restartsrv Script https://docs.cpanel.net/whm/
+scripts/the-restartsrv-script/
+R5 cPanel & WHM - How to Restart Services https://docs.cpanel.net/knowledge-
+base/general-systems-
+administration/how-to-restart-
+services/
+R6 cPanel & WHM - How to Manage Hard Drive https://docs.cpanel.net/knowledge-
+
+===== PAGE 29 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 29
+ID Official Source Link
+Space base/general-server-
+administration/how-to-manage-
+your-hard-drive-space/
+R7 cPanel & WHM - How to Fix License File 
+Errors
+https://docs.cpanel.net/knowledge-
+base/cpanel-product/how-to-fix-
+license-file-errors/
+R8 cPanel & WHM - WHM Scripts / 
+rebuildhttpdconf and service tools
+https://docs.cpanel.net/whm/
+scripts/whm-scripts/
+R9 Apache HTTP Server 2.4 - Configuration Files 
+and configtest
+https://httpd.apache.org/docs/2.4/
+configuring.html
+R10 Nginx - Command-line Parameters https://nginx.org/en/docs/
+switches.html
+R11 Nginx - Server Names https://nginx.org/en/docs/http/
+server_names.html
+R12 Nginx - Beginner’s Guide / proxy and reload 
+concepts
+https://nginx.org/en/docs/
+beginners_guide.html
+R13 Dovecot - Logging and Authentication 
+Debugging
+https://doc.dovecot.org/main/core/
+admin/logging.html
+R14 Dovecot - Testing https://doc.dovecot.org/main/core/
+admin/testing.html
+R15 Exim - Current Specification: The Exim 
+Command Line
+https://www.exim.org/exim-html-
+current/doc/html/spec_html/ch-
+the_exim_command_line.html
+R16 SnappyMail - Official Project Repository https://github.com/the-djmaze/
+snappymail
+R17 Cloudflare - DNS Proxy Status https://developers.cloudflare.com/
+dns/proxy-status/
+R18 Cloudflare - DNS Proxy Use Cases https://developers.cloudflare.com/
+dns/proxy-status/use-cases/
+R19 Cloudflare - Allow Cloudflare IP Addresses https://developers.cloudflare.com/
+fundamentals/concepts/cloudflare-
+ip-addresses/
+R20 Cloudflare - Origin CA and Full (strict) https://developers.cloudflare.com/
+ssl/origin-configuration/origin-ca/
+R21 Certbot - User Guide and Renewal Dry Run https://eff-certbot.readthedocs.io/
+en/stable/using.html
+R22 AlmaLinux Documentation https://wiki.almalinux.org/
+Appendix A - Quick Command Packs
+A.1 cPanel Rapid Isolation
+date; hostname -f; uptime
+curl -kIv --connect-timeout 10 https://127.0.0.1:2083/
+systemctl status cpanel --no-pager -l
+ps -ef | grep '[c]psrvd'
+
+===== PAGE 30 =====
+SERVER TROUBLESHOOTING CASE STUDY Pragati Pardhi | AI Full Stack
+Confidential interview assignment | Prepared 22 July 2026 Page 30
+ss -ltnp | grep -E ':(2083|2087)\b'
+df -hT; df -i; free -m
+journalctl -u cpanel --since '-30 min' --no-pager
+tail -n 150 /usr/local/cpanel/logs/error_log
+csf -g 2083 2>/dev/null; csf -g CLIENT_IP 2>/dev/null
+A.2 SnappyMail Rapid Isolation
+curl -kIv https://webmail.example.com/
+curl -kIv --resolve webmail.example.com:443:ORIGIN_IP https://webmail.example.com/
+systemctl status httpd nginx dovecot exim --no-pager -l
+ss -ltnp | grep -E ':(80|443|143|993|25|465|587)\b'
+php -v; php -m | sort
+dovecot -n
+doveadm auth test user@example.com
+exim -bpc; exim -bp | head -60
+tail -n 100 /var/log/maillog
+tail -n 100 /var/log/exim_mainlog
+A.3 Subdomain Rapid Isolation
+dig NS example.com +short
+dig @AUTHORITATIVE_NS app.example.com A +noall +answer
+dig app.example.com AAAA +noall +answer
+curl -kIv --resolve app.example.com:443:ORIGIN_IP https://app.example.com/
+apachectl configtest; apachectl -S
+nginx -t 2>/dev/null; nginx -T 2>/dev/null | grep -n -A6 -B4 'app.example.com'
+openssl s_client -connect app.example.com:443 -servername app.example.com </dev/null 2>/dev/null | 
+openssl x509 -noout -subject -issuer -dates -ext subjectAltName
+Appendix B - Sample Incident Timeline
+Time Event / Evidence Decision
+14:02 Client reports cPanel timeout, SnappyMail 
+failure, two subdomains down. Main domain 
+works.
+Treat as potentially related 
+network/resource/change incident; start 
+evidence capture.
+14:05 SSH works. cPanel responds on 
+127.0.0.1:2083.
+cpsrvd is alive; investigate remote path.
+14:08 CSF shows client IP denied and TCP_IN 
+missing 2083 after policy update.
+Firewall root cause for cPanel reachability.
+14:12 SnappyMail HTTP 200; login fails. Port 993 
+absent; Dovecot inactive. /var full.
+Mail issue is service/storage, separate from 
+cPanel firewall.
+14:18 Large unrotated log identified; evidence 
+archived; disk space restored.
+Correct storage trigger before service 
+restart.
+14:22 Dovecot starts; doveadm auth and 
+SnappyMail login succeed.
+Mail access recovered.
+14:27 Authoritative DNS has no app.example.com 
+record; api.example.com record points to 
+old IP.
+Subdomain root causes are DNS migration 
+omissions.
+14:35 DNS records corrected; origin test shows 
+app vhost stale. Apache rebuilt; configtest 
+OK; AutoSSL rerun.
+Application endpoint recovered.
+14:50 External validation passes for cPanel, 
+SnappyMail read/send, app and api 
+subdomains.
+Begin observation and RCA.
+15:20 No recurrence; monitoring and change-
+control actions assigned.
+Incident closed with preventive plan.
