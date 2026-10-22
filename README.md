@@ -1,4 +1,18 @@
-# vinext-starter
+# Unique Higher Secondary Public School
+
+School website project for Unique Higher Secondary Public School, Sadar, Betul, Madhya Pradesh.
+
+[![Live Website](https://img.shields.io/badge/🌐_Live_Website-Visit_Now-0B6758?style=for-the-badge)](https://www.uniqueschoolbetul.com/)
+
+> **Note:** The button above opens the school's verified official website. A separate live deployment of this GitHub repository has not yet been verified.
+
+### Website preview image
+
+[![Unique School website preview](https://raw.githubusercontent.com/satitech-official/unique-school/main/public/og.png)](https://www.uniqueschoolbetul.com/)
+
+---
+
+## Technical project information
 
 A clean full-stack starter running on
 [vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
