@@ -2,9 +2,11 @@
 
 Original school website source code, updated with Unique School identity and contact details.
 
-[![View Website Source](https://img.shields.io/badge/View_Updated_Website_Code-GitHub-0B6758?style=for-the-badge)](https://github.com/satitech-official/unique-school/tree/main/app)
+[![Live Preview](https://img.shields.io/badge/LIVE_PREVIEW-OPEN_WEBSITE-007a63?style=for-the-badge)](https://unique-school-preview.vercel.app/)
 
-> The repository's own live preview is not deployed yet. This button opens the **updated website code**, not the unrelated school's old website. A live preview button will be added when the deployment URL is verified.
+[View Source Code](https://github.com/satitech-official/unique-school/tree/main/app)
+
+> Live Preview opens the **updated website built from this repository**, not the older official school website. The existing website styling is retained. Enquiry database submission may require additional production configuration.
 
 ---
 
