@@ -6,13 +6,14 @@ const waLink=(message:string)=>"https://wa.me/919452003222?text="+encodeURICompo
 const initial={student:"",guardian:"",phone:"",email:"",grade:"",previous:"",address:"",visit:"",transport:"No",message:"",consent:false};
 export default function AdmissionExperience(){const [data,setData]=useState(initial),[step,setStep]=useState(0),[error,setError]=useState(""),[faq,setFaq]=useState<number|null>(0),[handoff,setHandoff]=useState(false);
 const set=(k:keyof typeof initial,v:string|boolean)=>setData(p=>({...p,[k]:v}));
-const nameOK=(v:string)=>/^[\\p{L}][\\p{L} .'-]{1,79}$/u.test(v.trim())&&/[\\p{L}]{2}/u.test(v);
+const nameOK=(v:string)=>{const n=v.trim().replace(/\\s+/g," ");return n.length>=2&&n.length<=80&&/^[\\p{L}][\\p{L} .'-]*$/u.test(n)&&/[\\p{L}].*[\\p{L}]/u.test(n);};
+const schoolOK=(v:string)=>{const n=v.trim();return !n||n.length>=2&&n.length<=120&&/[\\p{L}]{2}/u.test(n);};
 const emailOK=(v:string)=>!v.trim()||/^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$/.test(v.trim());
 const dateOK=(v:string)=>!v||(/^\\d{4}-\\d{2}-\\d{2}$/.test(v)&&!Number.isNaN(Date.parse(v))&&v>=new Date().toLocaleDateString("en-CA"));
 const valid=(target=step)=>{let issue="";
- if(target===0){if(!nameOK(data.student))issue="Enter a valid student full name (at least 2 letters, no numbers or symbols).";else if(!data.grade)issue="Please select the class applying for.";else if(data.previous.trim()&&!nameOK(data.previous))issue="Enter a valid previous school name or leave it blank.";}
- if(target===1){if(!nameOK(data.guardian))issue="Enter a valid parent/guardian full name (at least 2 letters).";else if(!/^[6-9]\\d{9}$/.test(data.phone))issue="Enter a valid 10-digit Indian mobile number starting with 6, 7, 8 or 9.";else if(!emailOK(data.email))issue="Enter a valid email address or leave it blank.";else if(data.address.trim()&&data.address.trim().length<8)issue="Enter a complete address (at least 8 characters) or leave it blank.";}
- if(target===2){if(!dateOK(data.visit))issue="Please choose today or a future visit date.";else if(!data.consent)issue="Please consent to share the enquiry through WhatsApp.";}
+ if(target===0){if(!nameOK(data.student))issue="Please enter a valid student name with at least 2 letters.";else if(!data.grade)issue="Please select the class applying for.";else if(!schoolOK(data.previous))issue="Previous school name must have at least 2 letters, or leave it empty.";}
+ if(target===1){if(!nameOK(data.guardian))issue="Please enter a valid parent or guardian name.";else if(!/^[6-9]\\d{9}$/.test(data.phone))issue="Enter a valid 10-digit Indian mobile number starting with 6–9.";else if(!emailOK(data.email))issue="Enter a valid email or leave it blank.";else if(data.address.trim()&&data.address.trim().length<8)issue="Enter a full address (at least 8 characters), or leave it blank.";}
+ if(target===2){if(!dateOK(data.visit))issue="Select today or a future visit date.";else if(!data.consent)issue="Please consent before continuing to WhatsApp.";}
  setError(issue);return !issue;};
 const send=()=>{for(const i of [0,1,2]){if(!valid(i)){setStep(i);return;}}const msg=["Hello Unique Higher Secondary Public School, I would like to submit an admission enquiry.","Student: "+data.student,"Applying for: "+data.grade,"Guardian: "+data.guardian,"Mobile: "+data.phone,"Email: "+(data.email||"Not provided"),"Previous school: "+(data.previous||"Not provided"),"Address: "+(data.address||"Not provided"),"Preferred visit date: "+(data.visit||"Not selected"),"Transport enquiry: "+data.transport,"Message: "+(data.message||"None")].join("\n");setHandoff(true);window.open("https://wa.me/919452003222?text="+encodeURIComponent(msg),"_blank","noopener,noreferrer")};
 return <main className="admissions-page">
