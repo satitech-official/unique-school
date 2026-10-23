@@ -6,10 +6,10 @@ const waLink=(message:string)=>"https://wa.me/919452003222?text="+encodeURICompo
 const initial={student:"",guardian:"",phone:"",email:"",grade:"",previous:"",address:"",visit:"",transport:"No",message:"",consent:false};
 export default function AdmissionExperience(){const [data,setData]=useState(initial),[step,setStep]=useState(0),[error,setError]=useState(""),[faq,setFaq]=useState<number|null>(0),[handoff,setHandoff]=useState(false);
 const set=(k:keyof typeof initial,v:string|boolean)=>setData(p=>({...p,[k]:v}));
-const nameOK=(v:string)=>{const n=v.trim().replace(/\\s+/g," ");return n.length>=2&&n.length<=80&&/^[\\p{L}][\\p{L} .'-]*$/u.test(n)&&/[\\p{L}].*[\\p{L}]/u.test(n);};
-const schoolOK=(v:string)=>{const n=v.trim();return !n||n.length>=2&&n.length<=120&&/[\\p{L}]{2}/u.test(n);};
-const emailOK=(v:string)=>!v.trim()||/^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$/.test(v.trim());
-const dateOK=(v:string)=>!v||(/^\\d{4}-\\d{2}-\\d{2}$/.test(v)&&!Number.isNaN(Date.parse(v))&&v>=new Date().toLocaleDateString("en-CA"));
+const nameOK=(v:string)=>{const n=v.trim().replace(/\s+/g," ");return n.length>=2&&n.length<=80&&/^[a-zA-Z][a-zA-Z .'-]*$/.test(n)&&/[a-zA-Z].*[a-zA-Z]/.test(n);};
+const schoolOK=(v:string)=>{const n=v.trim();return !n||(n.length>=2&&n.length<=120&&/[a-zA-Z]{2}/.test(n));};
+const emailOK=(v:string)=>!v.trim()||/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim());
+const dateOK=(v:string)=>!v||(/^\d{4}-\d{2}-\d{2}$/.test(v)&&!Number.isNaN(Date.parse(v))&&v>=new Date().toLocaleDateString("en-CA"));
 const valid=(target=step)=>{let issue="";
  if(target===0){if(!nameOK(data.student))issue="Please enter a valid student name with at least 2 letters.";else if(!data.grade)issue="Please select the class applying for.";else if(!schoolOK(data.previous))issue="Previous school name must have at least 2 letters, or leave it empty.";}
  if(target===1){if(!nameOK(data.guardian))issue="Please enter a valid parent or guardian name.";else if(!/^[6-9]\\d{9}$/.test(data.phone))issue="Enter a valid 10-digit Indian mobile number starting with 6–9.";else if(!emailOK(data.email))issue="Enter a valid email or leave it blank.";else if(data.address.trim()&&data.address.trim().length<8)issue="Enter a full address (at least 8 characters), or leave it blank.";}
