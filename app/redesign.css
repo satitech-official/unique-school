@@ -52,3 +52,13 @@
 @media(max-width:900px){.about-bento{grid-template-columns:repeat(2,minmax(0,1fr))}.about-hero-enhanced{min-height:580px}}
 @media(max-width:600px){.about-hero-enhanced{padding:110px 20px 75px;min-height:590px}.about-hero-enhanced h1{font-size:clamp(2.9rem,10vw,4.2rem)}.about-hero-enhanced .about-hero-photo{background-position:60% center}.about-hero-enhanced .about-hero-index{left:20px;right:auto}.about-bento{grid-template-columns:1fr}.about-bento .about-card{min-height:315px}.about-bento .about-card .card-art{height:175px}}
 @media(prefers-reduced-motion:reduce){.about-marquee-track,.about-hero-enhanced .about-hero-photo{animation:none!important}.about-bento .about-card{transition:none}}
+
+/* About hero layout fix — override inherited generic .page-hero child grid rules */
+.page-hero.about-hero-enhanced{display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:center!important;min-height:600px!important;padding:100px max(5vw,24px) 85px!important}
+.page-hero.about-hero-enhanced .about-hero-content{display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:center!important;width:min(100%,760px)!important;max-width:760px!important;gap:0!important}
+.page-hero.about-hero-enhanced .about-hero-content>p:first-child{display:block!important;width:auto!important;max-width:100%!important;margin:0 0 14px!important;line-height:1.5!important}
+.page-hero.about-hero-enhanced .about-hero-content h1{display:block!important;width:100%!important;max-width:760px!important;margin:0 0 22px!important;font-size:clamp(3rem,6.2vw,6rem)!important;line-height:1.06!important;text-wrap:balance!important;letter-spacing:-.035em!important}
+.page-hero.about-hero-enhanced .about-hero-content .about-hero-description{display:block!important;width:100%!important;max-width:565px!important;margin:0 0 26px!important;font-size:clamp(15px,1.35vw,19px)!important;line-height:1.7!important}
+.page-hero.about-hero-enhanced .about-hero-content .about-hero-explore{display:inline-flex!important;align-items:center!important;justify-content:center!important;align-self:flex-start!important;flex:0 0 auto!important;width:auto!important;min-height:46px!important;max-width:100%!important;margin:0!important;padding:13px 22px!important;line-height:1.25!important;white-space:normal!important}
+.page-hero.about-hero-enhanced .about-hero-index{pointer-events:none}
+@media(max-width:720px){.page-hero.about-hero-enhanced{min-height:600px!important;padding:88px 20px 75px!important}.page-hero.about-hero-enhanced .about-hero-content h1{font-size:clamp(2.65rem,10vw,4.1rem)!important}.page-hero.about-hero-enhanced .about-hero-content .about-hero-description{max-width:100%!important}}
