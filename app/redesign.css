@@ -23,3 +23,32 @@
 .school-intro-modern .intro-details span{padding:9px 12px;background:#e8eadd;color:#24483d;font-size:11px;font-weight:650;border-radius:4px}
 .school-intro-modern .home-links{flex-wrap:wrap;gap:18px 28px;margin-top:30px}
 @media(max-width:800px){.school-intro-modern{grid-template-columns:1fr;gap:30px;padding:60px 20px}.school-intro-modern .intro-photo-frame{height:clamp(270px,65vw,450px)}.school-intro-modern .intro-story h2{font-size:clamp(2.4rem,8vw,3.6rem)}}
+
+/* ABOUT PAGE ONLY — retain original palette, typography and global site structure */
+.about-hero-enhanced{isolation:isolate;display:flex;align-items:center;min-height:clamp(520px,65vh,730px);padding:110px 6vw 85px;background:#3c1c25;overflow:hidden}
+.about-hero-enhanced .about-hero-photo{position:absolute;inset:0;background-image:linear-gradient(90deg,rgba(27,17,32,.95) 0%,rgba(42,22,36,.86) 42%,rgba(49,26,35,.22) 100%),url('https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=1800&q=85');background-size:cover;background-position:center;z-index:-1;animation:aboutPhotoReveal 12s ease-in-out infinite alternate}
+.about-hero-enhanced .about-hero-content{position:relative;z-index:2;max-width:790px}
+.about-hero-enhanced .about-hero-content>p:first-child{font-size:12px;letter-spacing:.22em;font-weight:700;color:#e9bc70}
+.about-hero-enhanced h1{font-size:clamp(3.4rem,7.2vw,7.2rem);line-height:1.03;max-width:850px;margin:25px 0;overflow-wrap:break-word}
+.about-hero-enhanced h1 em{font-style:normal;color:#f4c66e}
+.about-hero-enhanced .about-hero-description{font-size:clamp(15px,1.5vw,20px);line-height:1.75;max-width:610px;color:#f2ecdf}
+.about-hero-explore{display:inline-block;margin-top:30px;padding:14px 21px;border:1px solid #e9bc70;color:white;text-decoration:none;transition:background .3s,transform .3s}
+.about-hero-explore:hover{background:#b98d47;transform:translateY(-3px)}
+.about-hero-enhanced .about-hero-index{position:absolute;bottom:20px;right:6vw;font-size:10px;letter-spacing:.15em;color:#f1e4ca}
+.about-marquee{overflow:hidden;background:#112f30;color:#f7e7c3;padding:17px 0;margin-bottom:32px}
+.about-marquee-track{display:flex;gap:36px;white-space:nowrap;width:max-content;animation:aboutMarqueeMove 36s linear infinite;will-change:transform}
+.about-marquee-track>span{display:inline-flex;align-items:center;gap:36px;font-size:12px;font-weight:700;letter-spacing:.2em}
+.about-marquee-track b{color:#d6ae64}
+.about-marquee:hover .about-marquee-track{animation-play-state:paused}
+.about-bento{grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch}
+.about-bento .about-card{grid-column:auto;min-width:0;min-height:350px;overflow:hidden;border-radius:5px;transition:transform .35s ease,box-shadow .35s ease}
+.about-bento .about-card:hover{transform:translateY(-6px);box-shadow:0 20px 40px rgba(7,26,51,.15)}
+.about-bento .about-card .card-art{height:180px;width:100%;max-width:100%;overflow:hidden;flex-shrink:0;background-repeat:no-repeat;transition:background-size .5s ease,filter .5s ease;filter:saturate(.93)}
+.about-bento .about-card:hover .card-art{filter:saturate(1.1) brightness(1.04)}
+.about-bento .about-card h3{font-size:clamp(1.45rem,2vw,2.05rem);overflow-wrap:anywhere}
+.about-bento .about-card p{margin-top:auto}
+@keyframes aboutMarqueeMove{to{transform:translateX(-50%)}}
+@keyframes aboutPhotoReveal{from{transform:scale(1)}to{transform:scale(1.045)}}
+@media(max-width:900px){.about-bento{grid-template-columns:repeat(2,minmax(0,1fr))}.about-hero-enhanced{min-height:580px}}
+@media(max-width:600px){.about-hero-enhanced{padding:110px 20px 75px;min-height:590px}.about-hero-enhanced h1{font-size:clamp(2.9rem,10vw,4.2rem)}.about-hero-enhanced .about-hero-photo{background-position:60% center}.about-hero-enhanced .about-hero-index{left:20px;right:auto}.about-bento{grid-template-columns:1fr}.about-bento .about-card{min-height:315px}.about-bento .about-card .card-art{height:175px}}
+@media(prefers-reduced-motion:reduce){.about-marquee-track,.about-hero-enhanced .about-hero-photo{animation:none!important}.about-bento .about-card{transition:none}}
