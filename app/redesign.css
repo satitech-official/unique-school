@@ -104,3 +104,7 @@
 .site .premium-footer a i.fa-solid{margin-left:4px}
 .site a>.fa-solid,.site button>.fa-solid{font-size:.88em}
 .site a>.fa-arrow-up-right-from-square{font-size:.75em}
+
+/* Keep eleven school navigation links from wrapping at laptop widths */
+@media(max-width:1360px){.premium-header .mega-nav{display:none}.premium-header .mega-nav.open{display:grid;position:absolute;top:86px;left:0;right:0;background:var(--navy);padding:1rem 4vw;grid-template-columns:repeat(2,minmax(0,1fr));max-height:calc(100vh - 86px);overflow-y:auto}.premium-header .mega-nav.open a{padding:12px}.premium-header .nav-cta button{display:block}}
+@media(max-width:720px){.premium-header .mega-nav.open{top:74px;grid-template-columns:1fr 1fr;max-height:calc(100vh - 74px)}}
