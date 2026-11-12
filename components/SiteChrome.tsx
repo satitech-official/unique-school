@@ -6,7 +6,7 @@ export const nav=[['Home','/'],['About','/about'],['Academics','/academics'],['A
 
 export function SiteChrome({children,active="Home"}:{children:ReactNode;active?:string}){
  const[hi,setHi]=useState(false),[languageReady,setLanguageReady]=useState(false),[menu,setMenu]=useState(false),[scrolled,setScrolled]=useState(false),[progress,setProgress]=useState(0);
- useEffect(()=>{try{const saved=localStorage.getItem("unique-school-language");const cookie=document.cookie.match(/(?:^|;\\s*)unique_school_lang=(hi|en)/);setHi((saved??cookie?.[1])==="hi")}catch{}setLanguageReady(true)},[]);
+ useEffect(()=>{try{const saved=localStorage.getItem("unique-school-language");const cookie=document.cookie.match(/(?:^|;\s*)unique_school_lang=(hi|en)/);setHi((saved??cookie?.[1])==="hi")}catch{}setLanguageReady(true)},[]);
  useEffect(()=>{if(!languageReady)return;try{localStorage.setItem("unique-school-language",hi?"hi":"en");document.cookie="unique_school_lang="+(hi?"hi":"en")+"; path=/; max-age=31536000; SameSite=Lax"}catch{}},[hi,languageReady]);
  useSchoolTranslator(hi);
  useEffect(()=>{const f=()=>{setScrolled(scrollY>32);setProgress(document.documentElement.scrollHeight-innerHeight?scrollY/(document.documentElement.scrollHeight-innerHeight):0)};addEventListener('scroll',f,{passive:true});f();return()=>removeEventListener('scroll',f)},[]);
