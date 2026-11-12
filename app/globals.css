@@ -311,3 +311,47 @@ img,video,iframe{max-width:100%}
  .site .ud-toolbar .ud-toolbar-greeting h2{font-size:1.75rem}
  .site .ud-stats,.site .ud-shortcuts{grid-template-columns:minmax(0,1fr)}
 }
+
+
+/* Hindi language: preserve readable Devanagari glyphs and safe line wrapping on all screens. */
+.site.hindi{
+ font-family:Arial,"Nirmala UI","Noto Sans Devanagari","Mangal",sans-serif;
+}
+.site.hindi :is(h1,h2,h3,h4,.page-hero h1,.home-hero-copy h1,.premium-footer .footer-statement h2){
+ font-family:"Nirmala UI","Noto Sans Devanagari","Mangal",Arial,sans-serif!important;
+ font-weight:650;
+ letter-spacing:normal!important;
+ line-height:1.32!important;
+ overflow-wrap:break-word;
+ word-break:normal;
+}
+.site.hindi :is(p,button,a,small,span,b,strong,label,li){
+ letter-spacing:normal;
+}
+.site.hindi :is(.mega-nav a,.fac-explorer-menu button,.faq-sidebar button,.ud-role-tabs button){
+ line-height:1.5;
+}
+.site.hindi :is(.fac-buttons,.uc-hero-buttons,.ud-intro-actions,.sp-actions,.adm-hero-actions,.ug-hero-buttons) a{
+ white-space:normal;
+ text-align:center;
+ min-height:44px;
+}
+.site.hindi :is(.ud-section-title h2,.faq-group-heading h3,.uc-form-top h3){
+ line-height:1.35!important;
+}
+@media(max-width:760px){
+ .site.hindi :is(.home-hero-copy h1,.academic-hero h1,.adm-hero h1,.ul-hero h1,.sp-hero h1,.fac-hero h1,.faq-hero h1,.ug-hero h1,.ud-intro h1,.uc-hero h1){
+  font-size:clamp(2.1rem,8vw,3.5rem)!important;
+  line-height:1.3!important;
+ }
+ .site.hindi :is(.academic-page,.admissions-page,.unique-life,.sp-page,.fac-page,.faq-page,.ug-gallery,.ud-page,.uc-page) h2{
+  font-size:clamp(1.75rem,7vw,2.7rem);
+  line-height:1.38!important;
+ }
+ .site.hindi .ud-toolbar .ud-toolbar-greeting h2{
+  font-size:clamp(1.65rem,6vw,2.25rem);
+  line-height:1.38!important;
+ }
+ .site.hindi .premium-header .mega-nav.open a{min-height:48px}
+ .site.hindi .topbar button{min-height:34px}
+}
