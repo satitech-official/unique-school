@@ -295,3 +295,153 @@ Object.assign(schoolHindi,{
 "Let's begin a":"आइए शुरू करें","conversation.":"बातचीत।",
 "Call the school":"विद्यालय को कॉल करें",
 });
+
+
+/* Shared translations stay local: no API keys, remote translation request or student data transfer. */
+const baseText = new WeakMap<Text,string>();
+const appliedText = new WeakMap<Text,string>();
+const baseAttributes = new WeakMap<Element,Map<string,string>>();
+const appliedAttributes = new WeakMap<Element,Map<string,string>>();
+const translatedAttributes=["placeholder","title","aria-label","alt"];
+
+export function translateSchoolText(raw:string):string{
+ const str=raw.trim();
+ if(!str)return raw;
+ let hi=schoolHindi[str];
+ if(!hi){
+  const classMatch=/^Class\s+(\d{1,2})$/i.exec(str);
+  if(classMatch)hi="कक्षा "+classMatch[1];
+  else if(/^Class\s+(\d{1,2})\s*(?:to|-)\s*(\d{1,2})$/i.test(str)){
+   hi=str.replace(/Class\s+/i,"कक्षा ").replace(/\s*(?:to|-)\s*/i," से ");
+  }
+  else if(str==="All")hi="सभी";
+  else if(str==="All categories")hi="सभी श्रेणियाँ";
+  else if(str==="Choose a category")hi="श्रेणी चुनें";
+  else if(str==="General Enquiry")hi="सामान्य पूछताछ";
+  else if(str==="Admission")hi="प्रवेश";
+  else if(str==="Campus Visit")hi="विद्यालय भ्रमण";
+  else if(str==="General")hi="सामान्य";
+  else if(str==="Academics")hi="शिक्षा";
+  else if(str==="Classroom")hi="कक्षा";
+  else if(str==="Science")hi="विज्ञान";
+  else if(str==="Library")hi="पुस्तकालय";
+  else if(str==="Sports")hi="खेल";
+  else if(str==="Creativity")hi="रचनात्मकता";
+  else if(str==="Celebrations")hi="उत्सव";
+  else if(str==="Technology")hi="तकनीक";
+  else if(str==="Student Life")hi="विद्यार्थी जीवन";
+  else if(str==="Gallery & Events")hi="गैलरी और कार्यक्रम";
+  else if(str==="Facilities")hi="सुविधाएँ";
+  else if(str==="Contact & Transport")hi="संपर्क और परिवहन";
+  else if(str==="Dashboard & ERP")hi="डैशबोर्ड और ईआरपी";
+  else if(str==="English")hi="अंग्रेज़ी";
+  else if(str==="Hindi")hi="हिंदी";
+  else if(str==="Search")hi="खोजें";
+  else if(str==="Contact")hi="संपर्क";
+  else if(str==="Dark")hi="डार्क मोड";
+  else if(str==="Light")hi="लाइट मोड";
+  else if(str==="Next")hi="अगला";
+  else if(str==="Previous")hi="पिछला";
+  else if(str==="Back")hi="वापस";
+  else if(str==="Required")hi="आवश्यक";
+  else if(str==="Optional")hi="वैकल्पिक";
+  else if(str==="Yes")hi="हाँ";
+  else if(str==="No")hi="नहीं";
+  else if(str==="Submit enquiry")hi="पूछताछ भेजें";
+  else if(str==="Submitting enquiry...")hi="पूछताछ भेजी जा रही है...";
+  else if(str==="Expand all")hi="सभी उत्तर खोलें";
+  else if(str==="Collapse all")hi="सभी उत्तर बंद करें";
+  else if(str==="SEARCH RESULTS")hi="खोज परिणाम";
+  else if(str==="SELECTED TOPIC")hi="चुना गया विषय";
+  else if(str==="Help")hi="सहायता";
+  else if(str==="Select a date")hi="तारीख चुनें";
+  else if(str==="Nursery")hi="नर्सरी";
+  else if(str==="LKG")hi="एलकेजी";
+  else if(str==="UKG")hi="यूकेजी";
+  else if(/^Selected:\s/.test(str))hi="चुनी गई तारीख: "+str.slice(10);
+  else if(/^TOPIC\s+(\d+)/.test(str))hi=str.replace(/^TOPIC/i,"विषय");
+ }
+ if(!hi)return raw;
+ // Preserve whitespace to avoid concatenating adjacent inline elements.
+ const start=raw.match(/^\s*/)?.[0]||"";
+ const end=raw.match(/\s*$/)?.[0]||"";
+ return start+hi+end;
+}
+
+/** Works with existing JSX and dynamically rendered tabs without changing React state or form values. */
+export function useSchoolTranslator(isHindi:boolean){
+ useEffect(()=>{
+  const root=document.getElementById("unique-school-root");
+  if(!root)return;
+  document.documentElement.lang=isHindi?"hi":"en";
+  const shouldIgnore=(textNode:Text)=>{
+   const parent=textNode.parentElement;
+   return !parent||!!parent.closest("script,style,noscript,textarea,[contenteditable='true'],[data-no-translate]");
+  };
+  const translateNode=(node:Text)=>{
+   if(shouldIgnore(node))return;
+   const current=node.nodeValue??"";
+   const previous=baseText.get(node);
+   const applied=appliedText.get(node);
+   if(previous===undefined||(current!==applied&&current!==previous)){
+     baseText.set(node,current);
+   }
+   const base=baseText.get(node)??current;
+   const next=isHindi?translateSchoolText(base):base;
+   if(current!==next)node.nodeValue=next;
+   appliedText.set(node,next);
+  };
+  const translateElement=(element:Element)=>{
+   if(element.closest("[data-no-translate]"))return;
+   let originals=baseAttributes.get(element);
+   let applied=appliedAttributes.get(element);
+   if(!originals){originals=new Map();baseAttributes.set(element,originals)}
+   if(!applied){applied=new Map();appliedAttributes.set(element,applied)}
+   for(const attr of translatedAttributes){
+    const value=element.getAttribute(attr);
+    if(value===null)continue;
+    const prior=originals.get(attr);
+    if(prior===undefined||(value!==applied.get(attr)&&value!==prior))originals.set(attr,value);
+    const en=originals.get(attr)??value;
+    const translated=isHindi?translateSchoolText(en):en;
+    if(value!==translated)element.setAttribute(attr,translated);
+    applied.set(attr,translated);
+   }
+  };
+  const walk=(node:Node)=>{
+   if(node.nodeType===Node.TEXT_NODE){translateNode(node as Text);return}
+   if(node.nodeType!==Node.ELEMENT_NODE&&node.nodeType!==Node.DOCUMENT_FRAGMENT_NODE)return;
+   const element=node as Element;
+   if(node.nodeType===Node.ELEMENT_NODE){
+    if(element.matches("script,style,noscript,[data-no-translate]"))return;
+    translateElement(element);
+   }
+   const walker=document.createTreeWalker(node,NodeFilter.SHOW_TEXT|NodeFilter.SHOW_ELEMENT);
+   while(walker.nextNode()){
+    const current=walker.currentNode;
+    if(current.nodeType===Node.TEXT_NODE)translateNode(current as Text);
+    else {
+     const el=current as Element;
+     if(!el.closest("[data-no-translate]"))translateElement(el);
+    }
+   }
+  };
+  walk(root);
+  let scheduled=false;
+  const observer=new MutationObserver(records=>{
+   if(scheduled)return;
+   scheduled=true;
+   // Rendered data, tabs and form errors can change after user interaction.
+   queueMicrotask(()=>{
+    scheduled=false;
+    for(const item of records){
+     if(item.type==="characterData"){walk(item.target);continue}
+     if(item.type==="attributes"){walk(item.target);continue}
+     for(const child of item.addedNodes)walk(child);
+    }
+   });
+  });
+  observer.observe(root,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:translatedAttributes});
+  return()=>observer.disconnect();
+ },[isHindi]);
+}
