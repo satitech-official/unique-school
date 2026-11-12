@@ -20,7 +20,7 @@ export default function ContactExperience(){
  const [status,setStatus]=useState<"idle"|"sending"|"saved"|"error">("idle");
  const [feedback,setFeedback]=useState("");
  const [currentDate,setCurrentDate]=useState<string>("");
- useEffect(()=>{const d=new Date();setCurrentDate(new Intl.DateTimeFormat("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric",timeZone:"Asia/Kolkata"}).format(d))},[]);
+ useEffect(()=>{const sync=()=>{const d=new Date();const locale=document.documentElement.lang==="hi"?"hi-IN":"en-IN";setCurrentDate(new Intl.DateTimeFormat(locale,{weekday:"long",day:"numeric",month:"long",year:"numeric",timeZone:"Asia/Kolkata"}).format(d))};sync();document.addEventListener("unique-school-language",sync);return()=>document.removeEventListener("unique-school-language",sync)},[]);
  const validPhone=/^[6-9]\d{9}$/.test(values.phone.replace(/\D/g,""));
  const validEmail=!values.email.trim()||/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim());
  const requiredReady=values.parentName.trim().length>=2&&values.phone.replace(/\D/g,"").length===10&&validPhone&&values.childName.trim().length>=2&&!!values.grade&&validEmail&&consent;
