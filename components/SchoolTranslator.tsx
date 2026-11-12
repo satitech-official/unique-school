@@ -374,6 +374,7 @@ export function useSchoolTranslator(isHindi:boolean){
   const root=document.getElementById("unique-school-root");
   if(!root)return;
   document.documentElement.lang=isHindi?"hi":"en";
+  document.dispatchEvent(new Event("unique-school-language"));
   const shouldIgnore=(textNode:Text)=>{
    const parent=textNode.parentElement;
    return !parent||!!parent.closest("script,style,noscript,textarea,[contenteditable='true'],[data-no-translate]");
