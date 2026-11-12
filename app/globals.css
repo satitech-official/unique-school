@@ -169,7 +169,7 @@ img,video,iframe{max-width:100%}
 .site .premium-header,.site .topbar{max-width:100%}
 .site :is(.home-hero-copy,.academic-hero-copy,.adm-hero-grid,.ul-hero-content,.sp-hero-inner,.fac-hero-inner,.ug-hero-grid,.faq-hero-content,.ud-intro-grid,.uc-hero-inner){min-width:0}
 .site :is(.academic-programmes,.academic-methods,.academic-gallery,.adm-feature-grid,.adm-docs-grid,.ul-gallery-grid,.sp-games,.sp-gallery-grid,.fac-support-grid,.fac-photo-grid,.ug-grid,.ud-shortcuts,.uc-method-grid)>*{min-width:0}
-.site img{display:block;max-width:100%;height:auto}
+.site img{max-width:100%}
 .site :is(.ug-tile,.fac-photo-grid button,.sp-gallery-grid button,.academic-gallery figure,.adm-gallery figure) img{height:100%;object-fit:cover}
 @media(max-width:760px){
  .site .premium-header{z-index:100}
