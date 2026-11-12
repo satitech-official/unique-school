@@ -162,3 +162,71 @@ img,video,iframe{max-width:100%}
  .uc-form-card{padding:18px 14px}
 }
 @media(prefers-reduced-motion:reduce){.site *,.erp *{scroll-behavior:auto!important}}
+
+
+/* Mobile QA follow-up: avoid clipping content and resolve dense layouts. */
+.site{overflow-x:clip;overflow-y:visible}
+.site .premium-header,.site .topbar{max-width:100%}
+.site :is(.home-hero-copy,.academic-hero-copy,.adm-hero-grid,.ul-hero-content,.sp-hero-inner,.fac-hero-inner,.ug-hero-grid,.faq-hero-content,.ud-intro-grid,.uc-hero-inner){min-width:0}
+.site :is(.academic-programmes,.academic-methods,.academic-gallery,.adm-feature-grid,.adm-docs-grid,.ul-gallery-grid,.sp-games,.sp-gallery-grid,.fac-support-grid,.fac-photo-grid,.ug-grid,.ud-shortcuts,.uc-method-grid)>*{min-width:0}
+.site img{display:block;max-width:100%;height:auto}
+.site :is(.ug-tile,.fac-photo-grid button,.sp-gallery-grid button,.academic-gallery figure,.adm-gallery figure) img{height:100%;object-fit:cover}
+@media(max-width:760px){
+ .site .premium-header{z-index:100}
+ .site .premium-header .mega-nav.open{overscroll-behavior:contain;scrollbar-width:thin}
+ .site .premium-header .brand{max-width:calc(100% - 50px)}
+ .site .premium-header .brand b,.site .premium-header .brand small{overflow-wrap:anywhere}
+ .site :is(.academic-section-head,.adm-info-pair,.ul-intro,.ul-spotlight-grid,.ul-story-grid,.sp-intro,.sp-training-grid,.sp-safety-grid,.sp-champions>.sp-shell,.fac-intro,.fac-section-top,.ug-intro,.ug-head,.faq-title,.faq-hero-split,.ud-two-cols,.uc-section-heading){min-width:0;max-width:100%}
+ .site :is(.academic-tab-body,.adm-form-layout,.ul-spotlight-grid,.sp-training-grid,.fac-explorer-grid,.ug-feature-grid,.faq-columns,.ud-two-cols,.uc-enquiry-section)>*{min-width:0}
+ .site :is(.academic-gallery,.adm-gallery,.ul-gallery,.sp-gallery,.fac-gallery-section,.ug-gallery-main){max-width:100%}
+ .site :is(.academic-tab-body img,.adm-years-photo img,.ul-moment-photo img,.sp-training-photo img,.fac-showcase-photo img){max-width:100%;object-fit:cover}
+ .site :is(.academic-page,.admissions-page,.unique-life,.sp-page,.fac-page,.faq-page,.ug-gallery,.ud-page,.uc-page) h2{font-size:clamp(1.95rem,8vw,3.1rem);line-height:1.12}
+ .site :is(.academic-page,.admissions-page,.unique-life,.sp-page,.fac-page,.faq-page,.ug-gallery,.ud-page,.uc-page) h3{overflow-wrap:anywhere}
+ .site .ul-shell{width:calc(100% - 36px)}
+ .site .ul-hero h1{font-size:clamp(2.6rem,10vw,4.6rem);line-height:1.08}
+ .site .ul-hero-side{display:none}
+ .site .ul-steps,.site .ul-moment-grid,.site .ul-creative-grid,.site .ul-gallery-grid,.site .ul-community{grid-template-columns:minmax(0,1fr)}
+ .site .sp-games,.site .sp-feature-grid,.site .sp-gallery-grid{grid-template-columns:minmax(0,1fr)}
+ .site .academic-programmes,.site .academic-methods,.site .academic-gallery,.site .academic-pair{grid-template-columns:minmax(0,1fr)}
+ .site .adm-feature-grid,.site .adm-docs-grid,.site .adm-gallery>div>div{grid-template-columns:minmax(0,1fr)}
+ .site .fac-explorer-photo{height:clamp(240px,55vw,360px)}
+ .site .fac-photo-grid button{min-height:210px}
+ .site .faq-answers-toolbar{flex-wrap:wrap}
+ .site .faq-group-heading{gap:12px}
+ .site .faq-group-heading h3{font-size:clamp(1.6rem,7vw,2.2rem)}
+ .site .faq-question-num{flex-shrink:0}
+ .site .ug-lightbox>button{flex:0 0 34px}
+ .site .ud-notice-filter{flex-wrap:wrap}
+ .site .ud-notice-filter label{flex:1 1 100%}
+ .site .ud-role-foot{flex-wrap:wrap}
+ .site .ud-role-foot a{white-space:normal}
+ .site .uc-form-card{min-width:0}
+ .site .uc-form-grid>*{min-width:0}
+ .site .uc-topic-list button{grid-template-columns:40px minmax(0,1fr) 15px}
+ .site .uc-map-frame iframe{width:100%;height:100%}
+ .erp-login form,.erp-login label{min-width:0}
+ .erp .erp-main>header>div:last-child{gap:6px}
+}
+@media(max-width:400px){
+ .site .premium-header .brand b{font-size:10.5px}
+ .site .premium-header .brand small{font-size:6px;letter-spacing:0}
+ .site .premium-header .nav-cta{gap:5px}
+ .site .premium-header .nav-cta>a{padding:7px;font-size:9px}
+ .site .premium-footer .footer-statement{flex-direction:column;align-items:flex-start}
+ .site .premium-footer .footer-columns{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+ .site .premium-footer .footer-columns>div:first-child{grid-column:1/-1}
+ .site .fac-explorer-menu{grid-template-columns:minmax(0,1fr)}
+ .site .fac-explorer-menu button{grid-template-columns:23px minmax(0,1fr)}
+ .site .faq-sidebar{grid-template-columns:minmax(0,1fr)}
+ .site .faq-sidebar button{min-height:48px}
+ .site .ug-lightbox{padding-inline:5px}
+ .site .ug-lightbox-body{max-width:calc(100vw - 84px)}
+ .site .uc-form-card{padding:18px 14px}
+ .site .uc-form-grid>*{grid-column:1/-1}
+ .site .ud-calendar-grid{gap:1px}
+}
+@supports(padding:env(safe-area-inset-bottom)){
+ .site .whatsapp{bottom:calc(70px + env(safe-area-inset-bottom))}
+ .site .progress-top{bottom:calc(14px + env(safe-area-inset-bottom))}
+ .site .premium-header .mega-nav.open{padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+}
