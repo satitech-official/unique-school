@@ -785,3 +785,23 @@ Object.assign(schoolHindi,{
 "Ideas Come Alive":"विचारों को आकार दें","An illustrative creativity photograph":"रचनात्मकता की उदाहरणात्मक तस्वीर",
 "Growing Knowledge":"बढ़ता ज्ञान","An illustrative study photograph":"पढ़ाई की उदाहरणात्मक तस्वीर",
 });
+
+/* Footer and accessibility copy, including exactly rendered copyright text. */
+Object.assign(schoolHindi,{
+"© 2026 Unique Higher Secondary Public School · Respectful, inclusive education for every child.":"© 2026 यूनिक हायर सेकेंडरी पब्लिक स्कूल · हर बच्चे के लिए सम्मानजनक एवं समावेशी शिक्षा।",
+"© 2026 Unique Higher Secondary Public School":"© 2026 यूनिक हायर सेकेंडरी पब्लिक स्कूल",
+"Unique School official crest":"यूनिक स्कूल का आधिकारिक प्रतीक चिह्न",
+"WhatsApp admission enquiry":"प्रवेश पूछताछ के लिए व्हाट्सऐप",
+"Back to top":"सबसे ऊपर जाएँ",
+"Open navigation":"नेविगेशन खोलें",
+"Close navigation":"नेविगेशन बंद करें",
+"Main navigation":"मुख्य नेविगेशन",
+"English":"अंग्रेज़ी",
+"हिंदी":"हिंदी",
+"ERP Login":"ईआरपी लॉगिन",
+"Switch website to English":"वेबसाइट को अंग्रेज़ी में बदलें",
+"Switch to dark mode":"डार्क मोड चुनें",
+"Switch to light mode":"लाइट मोड चुनें",
+"Frequently asked questions":"अक्सर पूछे जाने वाले प्रश्न",
+"School Information Centre":"विद्यालय सूचना केंद्र",
+});
