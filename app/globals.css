@@ -230,3 +230,84 @@ img,video,iframe{max-width:100%}
  .site .progress-top{bottom:calc(14px + env(safe-area-inset-bottom))}
  .site .premium-header .mega-nav.open{padding-bottom:calc(20px + env(safe-area-inset-bottom))}
 }
+
+
+/* Dashboard mobile layout: let greeting use the whole row. No squashed words. */
+@media(max-width:920px){
+ .site .ud-toolbar{
+   display:grid;
+   grid-template-columns:minmax(0,1fr) auto;
+   grid-template-rows:auto auto;
+   align-items:center;
+   gap:14px 12px;
+   justify-content:stretch;
+   margin-bottom:22px;
+ }
+ .site .ud-toolbar .ud-menu-toggle{
+   grid-column:1;
+   grid-row:1;
+   justify-self:start;
+   min-height:44px;
+   white-space:nowrap;
+ }
+ .site .ud-toolbar .ud-toolbar-actions{
+   grid-column:2;
+   grid-row:1;
+   display:flex;
+   justify-self:end;
+   align-items:center;
+   flex-wrap:nowrap;
+   gap:8px;
+   min-width:max-content;
+ }
+ .site .ud-toolbar .ud-toolbar-actions button,
+ .site .ud-toolbar .ud-toolbar-actions a{min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+ .site .ud-toolbar .ud-toolbar-greeting{
+   grid-column:1/-1;
+   grid-row:2;
+   min-width:0;
+   width:100%;
+   display:block;
+ }
+ .site .ud-toolbar .ud-toolbar-greeting h2{
+   display:block;
+   width:100%;
+   max-width:100%;
+   margin:9px 0 7px;
+   font-size:clamp(1.8rem,6vw,2.5rem);
+   line-height:1.13;
+   letter-spacing:-.025em;
+   overflow-wrap:normal;
+   word-break:normal;
+   white-space:normal;
+ }
+ .site .ud-toolbar .ud-toolbar-greeting p{
+   font-size:12px;
+   line-height:1.5;
+   max-width:100%;
+ }
+ .site .ud-toolbar .ud-greeting{display:block;letter-spacing:.1em;line-height:1.6}
+ .site .ud-info-banner{align-items:flex-start}
+ .site .ud-info-banner>div{min-width:0}
+ .site .ud-stats article,.site .ud-shortcuts a{min-width:0;overflow-wrap:break-word}
+}
+@media(max-width:480px){
+ .site .ud-toolbar .ud-toolbar-greeting h2{font-size:clamp(1.8rem,8vw,2.3rem)}
+ .site .ud-toolbar .ud-toolbar-actions button{padding:11px 12px}
+ .site .ud-toolbar .ud-toolbar-actions a{width:44px;padding:11px}
+ .site .ud-info-banner{padding:14px 12px}
+ .site .ud-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .site .ud-stats article{padding:16px 12px}
+ .site .ud-stats article strong{font-size:clamp(.98rem,4vw,1.18rem);line-height:1.25}
+ .site .ud-shortcuts{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .site .ud-shortcuts a{padding:16px 12px}
+ .site .ud-section-title h2{font-size:clamp(1.55rem,6.8vw,2rem)}
+ .site .ud-role-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .site .ud-role-tabs button{justify-content:center;min-width:0}
+}
+@media(max-width:365px){
+ .site .ud-toolbar .ud-toolbar-actions{gap:5px}
+ .site .ud-toolbar .ud-toolbar-actions button{padding:10px}
+ .site .ud-toolbar .ud-toolbar-greeting h2{font-size:1.75rem}
+ .site .ud-stats,.site .ud-shortcuts{grid-template-columns:minmax(0,1fr)}
+}
